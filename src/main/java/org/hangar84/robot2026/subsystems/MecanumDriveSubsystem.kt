@@ -24,6 +24,10 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard
 import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine
 import org.hangar84.robot2026.constants.Constants.Mecanum
+import org.hangar84.robot2026.subsystems.MecanumDriveSubsystem.Motors.frontLeftMotor
+import org.hangar84.robot2026.subsystems.MecanumDriveSubsystem.Motors.frontRightMotor
+import org.hangar84.robot2026.subsystems.MecanumDriveSubsystem.Motors.rearLeftMotor
+import org.hangar84.robot2026.subsystems.MecanumDriveSubsystem.Motors.rearRightMotor
 
 data object DataTable {
 
@@ -42,24 +46,30 @@ data object DataTable {
 
 
 class MecanumDriveSubsystem :  Drivetrain() {
+    
+    object Motors {
+        val Motors.frontLeftMotor: SparkMax
+            get() = SparkMax(Mecanum.FRONT_LEFT_ID, MotorType.kBrushless)
+        val Motors.frontRightMotor: SparkMax
+            get() = SparkMax(Mecanum.FRONT_RIGHT_ID, MotorType.kBrushless)
+        val Motors.rearLeftMotor: SparkMax
+            get() = SparkMax(Mecanum.REAR_LEFT_ID, MotorType.kBrushless)
+        val Motors.rearRightMotor: SparkMax
+            get() = SparkMax(Mecanum.REAR_RIGHT_ID, MotorType.kBrushless)
+    }
 
     private val rightConfig: SparkMaxConfig = SparkMaxConfig()
 
-    private val frontLeftMotor = SparkMax(Mecanum.FRONT_LEFT_ID, MotorType.kBrushless)
-    private val frontRightMotor = SparkMax(Mecanum.FRONT_RIGHT_ID, MotorType.kBrushless)
-    private val rearLeftMotor = SparkMax(Mecanum.REAR_LEFT_ID, MotorType.kBrushless)
-    private val rearRightMotor = SparkMax(Mecanum.REAR_RIGHT_ID, MotorType.kBrushless)
-
     private val imu = ADIS16470_IMU()
 
-    private val frontLeftEncoder = frontLeftMotor.absoluteEncoder
-    private val frontRightEncoder = frontRightMotor.absoluteEncoder
-    private val rearLeftEncoder = rearLeftMotor.absoluteEncoder
-    private val rearRightEncoder = rearRightMotor.absoluteEncoder
+    private val frontLeftEncoder = Motors.frontLeftMotor.absoluteEncoder
+    private val frontRightEncoder = Motors.frontRightMotor.absoluteEncoder
+    private val rearLeftEncoder = Motors.rearLeftMotor.absoluteEncoder
+    private val rearRightEncoder = Motors.rearRightMotor.absoluteEncoder
 
     var mecanumDrive: MecanumDrive = MecanumDrive(
-        frontLeftMotor, rearLeftMotor,
-        frontRightMotor, rearRightMotor
+        Motors.frontLeftMotor, Motors.rearLeftMotor,
+        Motors.frontRightMotor, Motors.rearRightMotor
     )
 
     private var frontLeftLocation: Translation2d = Translation2d(0.833, 1.200)
@@ -124,30 +134,30 @@ class MecanumDriveSubsystem :  Drivetrain() {
                 // drive =
                 { voltage: Measure<VoltageUnit> ->
                     val volts = voltage.`in`(Volts)
-                    frontLeftMotor.setVoltage(volts)
-                    frontRightMotor.setVoltage(volts)
-                    rearLeftMotor.setVoltage(volts)
-                    rearRightMotor.setVoltage(volts)
+                    Motors.frontLeftMotor.setVoltage(volts)
+                    Motors.frontRightMotor.setVoltage(volts)
+                    Motors.rearLeftMotor.setVoltage(volts)
+                    Motors.rearRightMotor.setVoltage(volts)
                 },
                 // log =
                 { log: SysIdRoutineLog ->
                     log.motor("drive/front left")
-                        .voltage(appliedVoltage.mut_replace(frontLeftMotor.get() * getBatteryVoltage(), Volts))
+                        .voltage(appliedVoltage.mut_replace(Motors.frontLeftMotor.get() * getBatteryVoltage(), Volts))
                         .linearPosition(distance.mut_replace(frontLeftEncoder.position, Meters))
                         .linearVelocity(velocity.mut_replace(frontLeftEncoder.velocity, MetersPerSecond))
 
                     log.motor("drive/front right")
-                        .voltage(appliedVoltage.mut_replace(frontRightMotor.get() * getBatteryVoltage(), Volts))
+                        .voltage(appliedVoltage.mut_replace(Motors.frontRightMotor.get() * getBatteryVoltage(), Volts))
                         .linearPosition(distance.mut_replace(frontRightEncoder.position, Meters))
                         .linearVelocity(velocity.mut_replace(frontRightEncoder.velocity, MetersPerSecond))
 
                     log.motor("drive/rear left")
-                        .voltage(appliedVoltage.mut_replace(rearLeftMotor.get() * getBatteryVoltage(), Volts))
+                        .voltage(appliedVoltage.mut_replace(Motors.rearLeftMotor.get() * getBatteryVoltage(), Volts))
                         .linearPosition(distance.mut_replace(rearLeftEncoder.position, Meters))
                         .linearVelocity(velocity.mut_replace(rearLeftEncoder.velocity, MetersPerSecond))
 
                     log.motor("drive/rear right")
-                        .voltage(appliedVoltage.mut_replace(rearRightMotor.get() * getBatteryVoltage(), Volts))
+                        .voltage(appliedVoltage.mut_replace(Motors.rearRightMotor.get() * getBatteryVoltage(), Volts))
                         .linearPosition(distance.mut_replace(rearRightEncoder.position, Meters))
                         .linearVelocity(velocity.mut_replace(rearRightEncoder.velocity, MetersPerSecond))
                 },
@@ -158,7 +168,7 @@ class MecanumDriveSubsystem :  Drivetrain() {
 
     init {
         rightConfig.inverted(false)
-        rearRightMotor.configure(rightConfig, SparkBase.ResetMode.kNoResetSafeParameters, SparkBase.PersistMode.kPersistParameters)
+        Motors.rearRightMotor.configure(rightConfig, SparkBase.ResetMode.kNoResetSafeParameters, SparkBase.PersistMode.kPersistParameters)
 
         SmartDashboard.putData("Front Left PID Controller", frontLeftVelocityPIDController)
         SmartDashboard.putData("Front Right PID Controller", frontRightVelocityPIDController)
@@ -173,10 +183,10 @@ class MecanumDriveSubsystem :  Drivetrain() {
             mecanumDriveWheelPositions
         )
 
-        DataTable.frontLeftVoltageEntry.setDouble(frontLeftMotor.busVoltage)
-        DataTable.frontRightVoltageEntry.setDouble(frontRightMotor.busVoltage)
-        DataTable.rearLeftVoltageEntry.setDouble(rearLeftMotor.busVoltage)
-        DataTable.rearRightVoltageEntry.setDouble(rearRightMotor.busVoltage)
+        DataTable.frontLeftVoltageEntry.setDouble(Motors.frontLeftMotor.busVoltage)
+        DataTable.frontRightVoltageEntry.setDouble(Motors.frontRightMotor.busVoltage)
+        DataTable.rearLeftVoltageEntry.setDouble(Motors.rearLeftMotor.busVoltage)
+        DataTable.rearRightVoltageEntry.setDouble(Motors.rearRightMotor.busVoltage)
 
         DataTable.frontLeftVelocityEntry.setDouble(frontLeftEncoder.velocity)
         DataTable.frontRightVelocityEntry.setDouble(frontRightEncoder.velocity)
@@ -203,10 +213,10 @@ class MecanumDriveSubsystem :  Drivetrain() {
         val rearLeftOutput = rearLeftVelocityPIDController.calculate(rearLeftEncoder.velocity, wheelSpeeds.rearLeftMetersPerSecond)
         val rearRightOutput = rearRightVelocityPIDController.calculate(rearRightEncoder.velocity, wheelSpeeds.rearRightMetersPerSecond)
 
-        frontLeftMotor.setVoltage(frontLeftFed + frontLeftOutput)
-        frontRightMotor.setVoltage(frontRightFed + frontRightOutput)
-        rearLeftMotor.setVoltage(rearLeftFed + rearLeftOutput)
-        rearRightMotor.setVoltage(rearRightFed + rearRightOutput)
+        Motors.frontLeftMotor.setVoltage(frontLeftFed + frontLeftOutput)
+        Motors.frontRightMotor.setVoltage(frontRightFed + frontRightOutput)
+        Motors.rearLeftMotor.setVoltage(rearLeftFed + rearLeftOutput)
+        Motors.rearRightMotor.setVoltage(rearRightFed + rearRightOutput)
     }
 
 
