@@ -31,48 +31,44 @@ class SwerveDriveSubsystem :  Drivetrain() {
     private val MAX_ANGULAR_SPEED = RotationsPerSecond.of(1.0)
     private val WHEEL_BASE = Inches.of(24.0)
     private val TRACK_WIDTH = Inches.of(24.5)
-    
-    object Motors {
-        // Create MAXSwerveModules
-        val frontLeft: MAXSwerveModule = MAXSwerveModule(
-            Swerve.FRONT_LEFT_DRIVING_ID,
-            Swerve.FRONT_LEFT_TURNING_ID,
-            Degrees.of(270.0),
-            SwerveConfigs.drivingConfig,
-            SwerveConfigs.turningConfig
-        )
 
-        val frontRight: MAXSwerveModule = MAXSwerveModule(
-            Swerve.FRONT_RIGHT_DRIVING_ID,
-            Swerve.FRONT_RIGHT_TURNING_ID,
-            Degrees.of(0.0),
-            SwerveConfigs.drivingConfig,
-            SwerveConfigs.turningConfig
-        )
+    // Create MAXSwerveModules
+    private val frontLeft: MAXSwerveModule = MAXSwerveModule(
+        Swerve.FRONT_LEFT_DRIVING_ID,
+        Swerve.FRONT_LEFT_TURNING_ID,
+        Degrees.of(270.0),
+        SwerveConfigs.drivingConfig,
+        SwerveConfigs.turningConfig
+    )
 
-        val rearLeft: MAXSwerveModule = MAXSwerveModule(
-            Swerve.REAR_LEFT_DRIVING_ID,
-            Swerve.REAR_LEFT_TURNING_ID,
-            Degrees.of(180.0),
-            SwerveConfigs.drivingConfig,
-            SwerveConfigs.turningConfig
-        )
+    private val frontRight: MAXSwerveModule = MAXSwerveModule(
+        Swerve.FRONT_RIGHT_DRIVING_ID,
+        Swerve.FRONT_RIGHT_TURNING_ID,
+        Degrees.of(0.0),
+        SwerveConfigs.drivingConfig,
+        SwerveConfigs.turningConfig
+    )
 
-        val rearRight: MAXSwerveModule = MAXSwerveModule(
-            Swerve.REAR_RIGHT_DRIVING_ID,
-            Swerve.REAR_RIGHT_TURNING_ID,
-            Degrees.of(90.0),
-            SwerveConfigs.drivingConfig,
-            SwerveConfigs.turningConfig
-        )
-    }
+    private val rearLeft: MAXSwerveModule = MAXSwerveModule(
+        Swerve.REAR_LEFT_DRIVING_ID,
+        Swerve.REAR_LEFT_TURNING_ID,
+        Degrees.of(180.0),
+        SwerveConfigs.drivingConfig,
+        SwerveConfigs.turningConfig
+    )
 
-
+    private val rearRight: MAXSwerveModule = MAXSwerveModule(
+        Swerve.REAR_RIGHT_DRIVING_ID,
+        Swerve.REAR_RIGHT_TURNING_ID,
+        Degrees.of(90.0),
+        SwerveConfigs.drivingConfig,
+        SwerveConfigs.turningConfig
+    )
 
     // The gyro sensor
 
     private val allModules
-        get() = arrayOf(Motors.frontLeft, Motors.frontRight, Motors.rearLeft, Motors.rearRight)
+        get() = arrayOf(frontLeft, frontRight, rearLeft, rearRight)
     private val allModulePositions: Array<SwerveModulePosition>
         get() = allModules.map { it.position }.toTypedArray()
     internal val allModuleStates: Array<SwerveModuleState>
