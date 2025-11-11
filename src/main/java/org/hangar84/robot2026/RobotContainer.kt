@@ -25,9 +25,9 @@ import org.hangar84.robot2026.constants.Constants
 * (including subsystems, commands, and button mappings) should be declared here.
 */
 object RobotContainer {
-    private val driveSubsystem = false
+    private val buttonA = DigitalInput(9)
 
-    private val robotType: RobotType = if (!driveSubsystem) {
+    private val robotType: RobotType = if (buttonA.get()) {
         RobotType.SWERVE
     } else {
         RobotType.MECANUM
