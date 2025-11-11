@@ -24,10 +24,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard
 import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine
 import org.hangar84.robot2026.constants.Constants.Mecanum
-import org.hangar84.robot2026.subsystems.MecanumDriveSubsystem.Motors.frontLeftMotor
-import org.hangar84.robot2026.subsystems.MecanumDriveSubsystem.Motors.frontRightMotor
-import org.hangar84.robot2026.subsystems.MecanumDriveSubsystem.Motors.rearLeftMotor
-import org.hangar84.robot2026.subsystems.MecanumDriveSubsystem.Motors.rearRightMotor
 
 data object DataTable {
 
@@ -49,14 +45,10 @@ class MecanumDriveSubsystem :  Drivetrain() {
 
     private val rightConfig: SparkMaxConfig = SparkMaxConfig()
 
-    object Motors {
-        val frontLeftMotor = SparkMax(Mecanum.FRONT_LEFT_ID, MotorType.kBrushless)
-        val frontRightMotor = SparkMax(Mecanum.FRONT_RIGHT_ID, MotorType.kBrushless)
-        val rearLeftMotor = SparkMax(Mecanum.REAR_LEFT_ID, MotorType.kBrushless)
-        val rearRightMotor = SparkMax(Mecanum.REAR_RIGHT_ID, MotorType.kBrushless)
-    }
-
-
+    private val frontLeftMotor = SparkMax(Mecanum.FRONT_LEFT_ID, MotorType.kBrushless)
+    private val frontRightMotor = SparkMax(Mecanum.FRONT_RIGHT_ID, MotorType.kBrushless)
+    private val rearLeftMotor = SparkMax(Mecanum.REAR_LEFT_ID, MotorType.kBrushless)
+    private val rearRightMotor = SparkMax(Mecanum.REAR_RIGHT_ID, MotorType.kBrushless)
 
     private val imu = ADIS16470_IMU()
 

@@ -17,10 +17,6 @@ import edu.wpi.first.wpilibj.ADIS16470_IMU
 import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis
 import edu.wpi.first.wpilibj2.command.Command
 import org.hangar84.robot2026.constants.Constants.Swerve
-import org.hangar84.robot2026.subsystems.SwerveDriveSubsystem.Motors.frontLeft
-import org.hangar84.robot2026.subsystems.SwerveDriveSubsystem.Motors.frontRight
-import org.hangar84.robot2026.subsystems.SwerveDriveSubsystem.Motors.rearLeft
-import org.hangar84.robot2026.subsystems.SwerveDriveSubsystem.Motors.rearRight
 import org.hangar84.robot2026.swerve.MAXSwerveModule
 import org.hangar84.robot2026.swerve.SwerveConfigs
 import org.photonvision.EstimatedRobotPose
@@ -36,42 +32,40 @@ class SwerveDriveSubsystem :  Drivetrain() {
     private val WHEEL_BASE = Inches.of(24.0)
     private val TRACK_WIDTH = Inches.of(24.5)
 
-    object Motors {
-        // Create MAXSwerveModules
-        val frontLeft: MAXSwerveModule = MAXSwerveModule(
-            Swerve.FRONT_LEFT_DRIVING_ID,
-            Swerve.FRONT_LEFT_TURNING_ID,
-            Degrees.of(270.0),
-            SwerveConfigs.drivingConfig,
-            SwerveConfigs.turningConfig
-        )
-
-        val frontRight: MAXSwerveModule = MAXSwerveModule(
-            Swerve.FRONT_RIGHT_DRIVING_ID,
-            Swerve.FRONT_RIGHT_TURNING_ID,
-            Degrees.of(0.0),
-            SwerveConfigs.drivingConfig,
-            SwerveConfigs.turningConfig
-        )
-
-        val rearLeft: MAXSwerveModule = MAXSwerveModule(
-            Swerve.REAR_LEFT_DRIVING_ID,
-            Swerve.REAR_LEFT_TURNING_ID,
-            Degrees.of(180.0),
-            SwerveConfigs.drivingConfig,
-            SwerveConfigs.turningConfig
-        )
-
-        val rearRight: MAXSwerveModule = MAXSwerveModule(
-            Swerve.REAR_RIGHT_DRIVING_ID,
-            Swerve.REAR_RIGHT_TURNING_ID,
-            Degrees.of(90.0),
-            SwerveConfigs.drivingConfig,
-            SwerveConfigs.turningConfig
-        )
-    }
 
 
+    // Create MAXSwerveModules
+    val frontLeft: MAXSwerveModule = MAXSwerveModule(
+        Swerve.FRONT_LEFT_DRIVING_ID,
+        Swerve.FRONT_LEFT_TURNING_ID,
+        Degrees.of(270.0),
+        SwerveConfigs.drivingConfig,
+        SwerveConfigs.turningConfig
+    )
+
+    val frontRight: MAXSwerveModule = MAXSwerveModule(
+        Swerve.FRONT_RIGHT_DRIVING_ID,
+        Swerve.FRONT_RIGHT_TURNING_ID,
+        Degrees.of(0.0),
+        SwerveConfigs.drivingConfig,
+        SwerveConfigs.turningConfig
+    )
+
+    val rearLeft: MAXSwerveModule = MAXSwerveModule(
+        Swerve.REAR_LEFT_DRIVING_ID,
+        Swerve.REAR_LEFT_TURNING_ID,
+        Degrees.of(180.0),
+        SwerveConfigs.drivingConfig,
+        SwerveConfigs.turningConfig
+    )
+
+    val rearRight: MAXSwerveModule = MAXSwerveModule(
+        Swerve.REAR_RIGHT_DRIVING_ID,
+        Swerve.REAR_RIGHT_TURNING_ID,
+        Degrees.of(90.0),
+        SwerveConfigs.drivingConfig,
+        SwerveConfigs.turningConfig
+    )
 
     // The gyro sensor
 
