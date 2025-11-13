@@ -29,7 +29,7 @@ import kotlin.jvm.optionals.getOrNull
 
 
 
-class SwerveDriveSubsystem :  Drivetrain() {
+object SwerveDriveSubsystem :  Drivetrain() {
     // Constants
 
     private val MAX_SPEED = MetersPerSecond.of(4.8)
@@ -200,7 +200,7 @@ class SwerveDriveSubsystem :  Drivetrain() {
 
         allModules.forEachIndexed { i, module -> module.desiredState = desiredStates[i] }
     }
-    fun buildAutoChooser(): SendableChooser<Command> {
+    override fun buildAutoChooser(): SendableChooser<Command> {
         AutoBuilder.configure(
             // poseSupplier =
             { poseEstimator.estimatedPosition },

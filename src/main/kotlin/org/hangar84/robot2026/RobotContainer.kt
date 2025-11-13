@@ -10,6 +10,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser
 import edu.wpi.first.wpilibj.DigitalInput
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard
 import edu.wpi.first.wpilibj2.command.Command
+import edu.wpi.first.wpilibj2.command.CommandScheduler
 import edu.wpi.first.wpilibj2.command.InstantCommand
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController
 import org.hangar84.robot2026.constants.RobotType
@@ -37,13 +38,17 @@ object RobotContainer {
     // The robot's subsystems
     private val drivetrain: Drivetrain
         get() = when (robotType) {
-        RobotType.SWERVE -> SwerveDriveSubsystem()
-        RobotType.MECANUM -> MecanumDriveSubsystem()
-        else -> SwerveDriveSubsystem()
+        RobotType.SWERVE -> SwerveDriveSubsystem
+        RobotType.MECANUM -> MecanumDriveSubsystem
+        else -> SwerveDriveSubsystem
     }
     // The driver's controller
     private val controller: CommandXboxController = CommandXboxController(0)
-    private var autoChooser: SendableChooser<Command> = SwerveDriveSubsystem().buildAutoChooser()
+
+    private val autoChooser: SendableChooser<Command> = when (robotType) {
+        RobotType.SWERVE -> drivetrain.buildAutoChooser()
+        RobotType.MECANUM -> drivetrain.buildAutoChooser()
+    }
 
 
 
@@ -51,18 +56,15 @@ object RobotContainer {
         get() = autoChooser.selected ?: InstantCommand()
 
     init {
-        updateAutoChooser()
+        switchTo()
         SmartDashboard.putString("Selected Robot Type", robotType.name)
         SmartDashboard.putData("Auto Chooser", autoChooser)
         configureBindings()
 
     }
-
-    private fun updateAutoChooser() {
-        autoChooser = when (robotType) {
-            RobotType.SWERVE -> SwerveDriveSubsystem().buildAutoChooser()
-            RobotType.MECANUM -> MecanumDriveSubsystem().buildAutoChooser()
-        }
+    private fun switchTo() = when (robotType) {
+        RobotType.SWERVE -> CommandScheduler.getInstance().unregisterSubsystem(MecanumDriveSubsystem)
+        RobotType.MECANUM -> CommandScheduler.getInstance().unregisterSubsystem(SwerveDriveSubsystem)
     }
 
     private fun configureBindings() {
@@ -75,7 +77,7 @@ object RobotContainer {
 
 
         val park = if (robotType == RobotType.SWERVE) {
-            controller.leftBumper().whileTrue(SwerveDriveSubsystem().PARK_COMMAND)
+            controller.leftBumper().whileTrue(SwerveDriveSubsystem.PARK_COMMAND)
         } else {
             null
         }

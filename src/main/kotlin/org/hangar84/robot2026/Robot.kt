@@ -7,6 +7,7 @@ import edu.wpi.first.wpilibj.TimedRobot
 import edu.wpi.first.wpilibj.util.WPILibVersion
 import edu.wpi.first.wpilibj2.command.Command
 import edu.wpi.first.wpilibj2.command.CommandScheduler
+import org.hangar84.robot2026.subsystems.SwerveDriveSubsystem
 
 object Robot : TimedRobot() {
     private var autonomousCommand: Command? = null

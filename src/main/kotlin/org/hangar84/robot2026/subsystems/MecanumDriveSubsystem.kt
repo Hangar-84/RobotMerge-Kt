@@ -13,33 +13,20 @@ import edu.wpi.first.apriltag.AprilTagFields
 import edu.wpi.first.math.VecBuilder
 import edu.wpi.first.math.controller.PIDController
 import edu.wpi.first.math.controller.SimpleMotorFeedforward
-import edu.wpi.first.math.geometry.Pose2d
-import edu.wpi.first.math.geometry.Translation2d
+import edu.wpi.first.math.estimator.MecanumDrivePoseEstimator
+import edu.wpi.first.math.geometry.*
 import edu.wpi.first.math.kinematics.*
 import edu.wpi.first.networktables.NetworkTableEntry
 import edu.wpi.first.networktables.NetworkTableInstance
-import edu.wpi.first.units.Measure
-import edu.wpi.first.units.Units.Meters
-import edu.wpi.first.units.Units.MetersPerSecond
-import edu.wpi.first.units.Units.Volts
-import edu.wpi.first.units.VoltageUnit
+import edu.wpi.first.units.Units.Degrees
+import edu.wpi.first.units.Units.Inches
 import edu.wpi.first.wpilibj.ADIS16470_IMU
 import edu.wpi.first.wpilibj.DriverStation
-import edu.wpi.first.wpilibj.RobotController.getBatteryVoltage
 import edu.wpi.first.wpilibj.drive.MecanumDrive
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard
-import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog
 import edu.wpi.first.wpilibj2.command.Command
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine
 import org.hangar84.robot2026.constants.Constants.Mecanum
-import edu.wpi.first.math.estimator.MecanumDrivePoseEstimator
-import edu.wpi.first.math.geometry.Rotation2d
-import edu.wpi.first.math.geometry.Rotation3d
-import edu.wpi.first.math.geometry.Transform3d
-import edu.wpi.first.math.geometry.Translation3d
-import edu.wpi.first.units.Units.Degrees
-import edu.wpi.first.units.Units.Inches
 import org.photonvision.PhotonCamera
 
 data object DataTable {
@@ -58,7 +45,7 @@ data object DataTable {
 }
 
 
-class MecanumDriveSubsystem :  Drivetrain() {
+object MecanumDriveSubsystem :  Drivetrain() {
 
     private val rightConfig: SparkMaxConfig = SparkMaxConfig()
 
@@ -150,51 +137,6 @@ class MecanumDriveSubsystem :  Drivetrain() {
                 )
             )
 
-    private val appliedVoltage = Volts.mutable(0.0)
-
-    private val distance = Meters.mutable(0.0)
-
-    private val velocity = MetersPerSecond.mutable(0.0)
-
-
-    private val identificationRoutine =
-        SysIdRoutine(
-            SysIdRoutine.Config(),
-            SysIdRoutine.Mechanism(
-                // drive =
-                { voltage: Measure<VoltageUnit> ->
-                    val volts = voltage.`in`(Volts)
-                    frontLeftMotor.setVoltage(volts)
-                    frontRightMotor.setVoltage(volts)
-                    rearLeftMotor.setVoltage(volts)
-                    rearRightMotor.setVoltage(volts)
-                },
-                // log =
-                { log: SysIdRoutineLog ->
-                    log.motor("drive/front left")
-                        .voltage(appliedVoltage.mut_replace(frontLeftMotor.get() * getBatteryVoltage(), Volts))
-                        .linearPosition(distance.mut_replace(frontLeftEncoder.position, Meters))
-                        .linearVelocity(velocity.mut_replace(frontLeftEncoder.velocity, MetersPerSecond))
-
-                    log.motor("drive/front right")
-                        .voltage(appliedVoltage.mut_replace(frontRightMotor.get() * getBatteryVoltage(), Volts))
-                        .linearPosition(distance.mut_replace(frontRightEncoder.position, Meters))
-                        .linearVelocity(velocity.mut_replace(frontRightEncoder.velocity, MetersPerSecond))
-
-                    log.motor("drive/rear left")
-                        .voltage(appliedVoltage.mut_replace(rearLeftMotor.get() * getBatteryVoltage(), Volts))
-                        .linearPosition(distance.mut_replace(rearLeftEncoder.position, Meters))
-                        .linearVelocity(velocity.mut_replace(rearLeftEncoder.velocity, MetersPerSecond))
-
-                    log.motor("drive/rear right")
-                        .voltage(appliedVoltage.mut_replace(rearRightMotor.get() * getBatteryVoltage(), Volts))
-                        .linearPosition(distance.mut_replace(rearRightEncoder.position, Meters))
-                        .linearVelocity(velocity.mut_replace(rearRightEncoder.velocity, MetersPerSecond))
-                },
-                // subsystem =
-                this,
-            ),
-        )
     private val DRIVE_FORWARD_COMMAND = run {
         drive(0.0, 0.3, 0.0, false)
     }
@@ -227,12 +169,6 @@ class MecanumDriveSubsystem :  Drivetrain() {
         DataTable.rearRightVelocityEntry.setDouble(rearRightEncoder.velocity)
     }
 
-    fun resetPose (pose: Pose2d) {
-        mecanumDriveOdometry.resetPosition(
-            rotation2d, mecanumDriveWheelPositions, pose
-        )
-    }
-
     fun driveRelative(relativeSpeeds: ChassisSpeeds) {
         val wheelSpeeds = mecanumDriveKinematics.toWheelSpeeds(relativeSpeeds)
 
@@ -257,7 +193,7 @@ class MecanumDriveSubsystem :  Drivetrain() {
         mecanumDrive.driveCartesian(ySpeed, xSpeed, rot)
     }
 
-    fun buildAutoChooser(): SendableChooser<Command> {
+    override fun buildAutoChooser(): SendableChooser<Command> {
         AutoBuilder.configure(
             // poseSupplier =
             { poseEstimator.estimatedPosition },
