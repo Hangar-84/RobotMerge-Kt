@@ -1,54 +1,51 @@
 package org.hangar84.robot2026
 
-//import com.pathplanner.lib.auto.AutoBuilder
-//import com.pathplanner.lib.config.PIDConstants
-//import com.pathplanner.lib.config.RobotConfig
-//import com.pathplanner.lib.controllers.PPHolonomicDriveController
-//import edu.wpi.first.math.MathUtil
-//import edu.wpi.first.wpilibj.DriverStation
+/*import com.pathplanner.lib.auto.AutoBuilder
+import com.pathplanner.lib.config.PIDConstants
+import com.pathplanner.lib.config.RobotConfig
+import com.pathplanner.lib.controllers.PPHolonomicDriveController
+import edu.wpi.first.math.MathUtil
+import edu.wpi.first.wpilibj.DriverStation
+import org.hangar84.robot2026.constants.Constants
+import edu.wpi.first.wpilibj2.command.CommandScheduler*/
+import edu.wpi.first.math.MathUtil
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser
 import edu.wpi.first.wpilibj.DigitalInput
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard
 import edu.wpi.first.wpilibj2.command.Command
-import edu.wpi.first.wpilibj2.command.CommandScheduler
 import edu.wpi.first.wpilibj2.command.InstantCommand
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController
 import org.hangar84.robot2026.constants.RobotType
 import org.hangar84.robot2026.subsystems.*
 import org.hangar84.robot2026.commands.DriveCommand
-import org.hangar84.robot2026.constants.Constants
+import org.hangar84.robot2026.subsystems.SwerveDriveSubsystem.MAX_SPEED
+import edu.wpi.first.units.Units.MetersPerSecond as MPS
+import edu.wpi.first.units.Units.RadiansPerSecond as RPS
+import org.hangar84.robot2026.subsystems.SwerveDriveSubsystem.MAX_ANGULAR_SPEED
 
 
-/*
-* This class is where the bulk of the robot should be declared.  Since Command-based is a
-* "declarative" paradigm, very little robot logic should actually be handled in the {@link Robot}
-* periodic methods (other than the scheduler calls).  Instead, the structure of the robot
-* (including subsystems, commands, and button mappings) should be declared here.
-*/
+
 object RobotContainer {
+
+    private const val DRIVEDEADBAND = 0.5
+    private val controller: CommandXboxController = CommandXboxController(0)
     private val buttonA = DigitalInput(9)
 
-    private val robotType: RobotType
-        get() = if (buttonA.get()) {
+    val robotType: RobotType =
+        if (buttonA.get()) {
         RobotType.SWERVE
     } else {
         RobotType.MECANUM
     }
 
     // The robot's subsystems
-    private val drivetrain: Drivetrain
-        get() = when (robotType) {
+    private val drivetrain: Drivetrain = when (robotType) {
         RobotType.SWERVE -> SwerveDriveSubsystem
         RobotType.MECANUM -> MecanumDriveSubsystem
-        else -> SwerveDriveSubsystem
     }
     // The driver's controller
-    private val controller: CommandXboxController = CommandXboxController(0)
 
-    private val autoChooser: SendableChooser<Command> = when (robotType) {
-        RobotType.SWERVE -> drivetrain.buildAutoChooser()
-        RobotType.MECANUM -> drivetrain.buildAutoChooser()
-    }
+    private val autoChooser: SendableChooser<Command> = drivetrain.buildAutoChooser()
 
 
 
@@ -56,32 +53,36 @@ object RobotContainer {
         get() = autoChooser.selected ?: InstantCommand()
 
     init {
-        switchTo()
         SmartDashboard.putString("Selected Robot Type", robotType.name)
         SmartDashboard.putData("Auto Chooser", autoChooser)
+
         configureBindings()
 
     }
-    private fun switchTo() = when (robotType) {
-        RobotType.SWERVE -> CommandScheduler.getInstance().unregisterSubsystem(MecanumDriveSubsystem)
-        RobotType.MECANUM -> CommandScheduler.getInstance().unregisterSubsystem(SwerveDriveSubsystem)
-    }
-
     private fun configureBindings() {
-        drivetrain.defaultCommand = DriveCommand(
-            drivetrain,
-            { -controller.leftY },
-            { controller.leftX },
-            { controller.rightX }
-        )
+        /*val x: Double = MathUtil.applyDeadband(-controller.leftX, DRIVEDEADBAND)
+        val y: Double = MathUtil.applyDeadband(-controller.leftY, DRIVEDEADBAND)
+        val rot: Double = MathUtil.applyDeadband(controller.rightX, DRIVEDEADBAND)*/
 
-
-        val park = if (robotType == RobotType.SWERVE) {
-            controller.leftBumper().whileTrue(SwerveDriveSubsystem.PARK_COMMAND)
+        if (robotType == RobotType.MECANUM) {
+            drivetrain.defaultCommand = drivetrain.run { DriveCommand(
+                drivetrain,
+                { MathUtil.applyDeadband(controller.leftX, DRIVEDEADBAND) },
+                { MathUtil.applyDeadband(-controller.leftY, DRIVEDEADBAND) },
+                { MathUtil.applyDeadband(controller.rightX, DRIVEDEADBAND) },
+                { false }
+            )}
         } else {
-            null
+            drivetrain.defaultCommand =
+                drivetrain.run { DriveCommand(
+                drivetrain,
+                { MathUtil.applyDeadband(-controller.leftX, DRIVEDEADBAND) * MAX_SPEED.`in`(MPS)},
+                { MathUtil.applyDeadband(-controller.leftY, DRIVEDEADBAND) * MAX_SPEED.`in`(MPS) },
+                { MathUtil.applyDeadband(controller.rightX, DRIVEDEADBAND) * MAX_ANGULAR_SPEED.`in`(RPS)},
+                { true }
+            )}
+            controller.leftBumper().whileTrue(SwerveDriveSubsystem.PARK_COMMAND)
         }
-        park
 
         controller.leftBumper().onTrue(LauncherSubsystem.INTAKE_COMMAND).onFalse(LauncherSubsystem.STOP_COMMAND)
         controller.rightBumper().onTrue(LauncherSubsystem.LAUNCH_COMMAND).onFalse(LauncherSubsystem.STOP_COMMAND)
