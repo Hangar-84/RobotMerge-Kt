@@ -1,37 +1,32 @@
 {
-  "robotConfig": {
-    "holonomic": true,
-    "trackWidth": 0.5461,
-    "wheelBase": 0.52705,
-    "modules": {
-      "frontLeft": {
-        "x": 0.37,
-        "y": 0.37
-      },
-      "frontRight": {
-        "x": 0.37,
-        "y": -0.37
-      },
-      "backLeft": {
-        "x": -0.37,
-        "y": 0.37
-      },
-      "backRight": {
-        "x": -0.37,
-        "y": -0.37
-      }
-    },
-    "defaultConstraints": {
-      "maxVelocity": 3.000,
-      "maxAcceleration": 3.000,
-      "maxAngularVelocity": 540.00,
-      "maxAngularAcceleration": 720.00
-    },
-    "nominalVoltage": 12.0,
-    "holonomicMode": true,
-    "useAllianceColor": true,
-    "defaultField": "Reefscape",
-    "theme": "dark",
-    "version": 3
-  }
+  "robotWidth": 0.9,
+  "robotLength": 0.9,
+  "holonomicMode": true,
+  "pathFolders": [],
+  "autoFolders": [],
+  "defaultMaxVel": 3.0,
+  "defaultMaxAccel": 3.0,
+  "defaultMaxAngVel": 540.0,
+  "defaultMaxAngAccel": 720.0,
+  "defaultNominalVoltage": 12.0,
+  "robotMass": 74.088,
+  "robotMOI": 6.883,
+  "robotTrackwidth": 0.546,
+  "driveWheelRadius": 0.237,
+  "driveGearing": 5.143,
+  "maxDriveSpeed": 13.0,
+  "driveMotorType": "NEO",
+  "driveCurrentLimit": 50.0,
+  "wheelCOF": 1.2,
+  "flModuleX": 0.37,
+  "flModuleY": 0.37,
+  "frModuleX": 0.37,
+  "frModuleY": -0.37,
+  "blModuleX": -0.37,
+  "blModuleY": 0.37,
+  "brModuleX": -0.37,
+  "brModuleY": -0.37,
+  "bumperOffsetX": 0.0,
+  "bumperOffsetY": 0.0,
+  "robotFeatures": []
 }

@@ -30,8 +30,10 @@ deploy {
                 setJarTask(tasks.jar)
             }
 
-            register<FileTreeArtifact>("frcStaticFileDeploy") {
-                files = project.fileTree("src/main/deploy")
+            register<FileTreeArtifact>("pathplannerDeploy") {
+                files = project.fileTree("src/main/deploy/pathplanner/") {
+                    include("**/*")
+                }
                 directory = "/home/lvuser/deploy"
                 deleteOldFiles = true
             }
