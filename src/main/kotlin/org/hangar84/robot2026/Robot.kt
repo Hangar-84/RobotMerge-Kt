@@ -17,6 +17,7 @@ object Robot : TimedRobot() {
 
     override fun robotPeriodic() {
         CommandScheduler.getInstance().run()
+        RobotContainer.periodic()
     }
 
     override fun disabledInit() {
@@ -51,5 +52,6 @@ object Robot : TimedRobot() {
     }
 
     override fun simulationPeriodic() {
+        RobotContainer.simulationPeriodic()
     }
 }

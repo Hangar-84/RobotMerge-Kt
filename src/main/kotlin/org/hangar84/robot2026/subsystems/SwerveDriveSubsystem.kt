@@ -23,9 +23,26 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard
 import edu.wpi.first.wpilibj2.command.Command
 import edu.wpi.first.wpilibj2.command.Commands
 import org.hangar84.robot2026.constants.Constants.Swerve
+import org.hangar84.robot2026.sim.SimState.yaw as simyaw
+import org.hangar84.robot2026.sim.SimState.pose as simpose
+import org.hangar84.robot2026.sim.SimState.isSim
+import org.hangar84.robot2026.sim.SimState.simFL
+import org.hangar84.robot2026.sim.SimState.simFR
+import org.hangar84.robot2026.sim.SimState.simRL
+import org.hangar84.robot2026.sim.SimState.simRR
+import org.hangar84.robot2026.sim.SimState.simFLVel
+import org.hangar84.robot2026.sim.SimState.simFRVel
+import org.hangar84.robot2026.sim.SimState.simRLVel
+import org.hangar84.robot2026.sim.SimState.simRRVel
+import org.hangar84.robot2026.sim.SimState.simFLAngleDeg
+import org.hangar84.robot2026.sim.SimState.simFRAngleDeg
+import org.hangar84.robot2026.sim.SimState.simRLAngleDeg
+import org.hangar84.robot2026.sim.SimState.simRRAngleDeg
+import org.hangar84.robot2026.telemetry.SimTelemetry
 import org.hangar84.robot2026.swerve.MAXSwerveModule
 import org.hangar84.robot2026.swerve.SwerveConfigs.drivingConfig
 import org.hangar84.robot2026.swerve.SwerveConfigs.turningConfig
+import org.hangar84.robot2026.telemetry.Telemetry
 import org.photonvision.EstimatedRobotPose
 import org.photonvision.PhotonCamera
 import org.photonvision.PhotonPoseEstimator
@@ -38,6 +55,9 @@ class SwerveDriveSubsystem :  Drivetrain() {
         internal val MAX_SPEED = MetersPerSecond.of(4.8)
         internal val MAX_ANGULAR_SPEED = RotationsPerSecond.of(1.0)
     }
+
+    override val maxLinearSpeedMps: Double = MAX_SPEED.`in`(MetersPerSecond)
+    override val maxAngularSpeedRadPerSec: Double = MAX_ANGULAR_SPEED.`in`(RadiansPerSecond)
 
     private val WHEEL_BASE = Inches.of(24.0)
     private val TRACK_WIDTH = Inches.of(24.5)
@@ -93,9 +113,15 @@ class SwerveDriveSubsystem :  Drivetrain() {
         get() = allModules.map { it.state }.toTypedArray()
     // -- Sensors --
 
-    private val imu = ADIS16470_IMU()
+    private val imu: ADIS16470_IMU? = if (isSim) null else ADIS16470_IMU()
     private val rotation
-        get() = Rotation2d.fromDegrees(imu.getAngle(IMUAxis.kZ))
+        get() = if (isSim) simyaw else Rotation2d.fromDegrees(imu!!.getAngle(IMUAxis.kZ))
+
+    override fun getHeading(): Rotation2d =
+        if (isSim)
+            simyaw
+        else
+            rotation
 
     // -- Odometry & Kinematics --
 
@@ -110,7 +136,7 @@ class SwerveDriveSubsystem :  Drivetrain() {
     internal var odometry: SwerveDriveOdometry =
         SwerveDriveOdometry(
             kinematics,
-            rotation,
+            getHeading(),
             allModulePositions
         )
 
@@ -131,7 +157,7 @@ class SwerveDriveSubsystem :  Drivetrain() {
     internal var poseEstimator: SwerveDrivePoseEstimator =
         SwerveDrivePoseEstimator(
             kinematics,
-            rotation,
+            getHeading(),
             allModulePositions,
             Pose2d(),
             VecBuilder.fill(0.1, 0.1, 0.1), // State standard deviations
@@ -226,15 +252,16 @@ class SwerveDriveSubsystem :  Drivetrain() {
     private fun publishSwerveTelemetry() {
         val pose = poseEstimator.estimatedPosition
 
-        SmartDashboard.putNumber("Swerve/YawDeg", rotation.degrees)
-        SmartDashboard.putNumber("Swerve/Pose/X", pose.x)
-        SmartDashboard.putNumber("Swerve/Pose/Y", pose.y)
-        SmartDashboard.putNumber("Swerve/Pose/HeadingDeg", pose.rotation.degrees)
+        Telemetry.num("Swerve/YawDeg", getHeading().degrees)
+        Telemetry.pose("Swerve/Pose", pose)
 
         val chassis = kinematics.toChassisSpeeds(*allModuleStates)
-        SmartDashboard.putNumber("Swerve/Chassis/Vx", chassis.vxMetersPerSecond)
-        SmartDashboard.putNumber("Swerve/Chassis/Vy", chassis.vyMetersPerSecond)
-        SmartDashboard.putNumber("Swerve/Chassis/Omega", chassis.omegaRadiansPerSecond)
+        Telemetry.chassisVel(
+            "Swerve/Chassis",
+            chassis.vxMetersPerSecond,
+            chassis.vyMetersPerSecond,
+            chassis.omegaRadiansPerSecond
+        )
 
         // Only compute estimate ONCE per periodic
         // (See periodic() change below)
@@ -246,22 +273,66 @@ class SwerveDriveSubsystem :  Drivetrain() {
         publishModuleTelemetry("Swerve/RR", rearRight)
     }
 
+    private fun publishSwerveSimTelemetry(dtSeconds: Double) {
+        SimTelemetry.bool("Swerve/Sim", true)
+
+        SimTelemetry.pose("Swerve/Sim/Pose", simpose)
+        SimTelemetry.num("Swerve/Sim/YawDeg", simyaw.degrees)
+
+        SimTelemetry.wheelVel(
+            "Swerve/Sim/Cmd",
+            commandedSpeeds.vxMetersPerSecond,
+            commandedSpeeds.vyMetersPerSecond,
+            commandedSpeeds.omegaRadiansPerSecond
+        )
+
+        // “Module states” in sim are not computed currently; if you want them,
+        // we can derive them from kinematics using commandedSpeeds.
+
+        SimTelemetry.speedMPS(
+            "Swerve/Sim/SpeedMPS",
+            simFLVel,
+            simFRVel,
+            simRLVel,
+            simRRVel
+        )
+
+        SimTelemetry.wheelEncoders(
+            "Swerve/Sim/Encoders",
+            simFL, simFR, simRL, simRR,
+            simFLVel, simFRVel, simRLVel, simRRVel
+        )
+
+        SimTelemetry.angleDeg(
+            "Swerve/Sim/AzimuthDeg",
+            simFLAngleDeg,
+            simFRAngleDeg,
+            simRLAngleDeg,
+            simRRAngleDeg
+        )
+    }
+
     override fun periodic() {
 
+        val positions = if (isSim) simModulePositions() else allModulePositions
 
-        odometry.update(rotation, allModulePositions)
-        poseEstimator.update(rotation, allModulePositions)
 
-        val estimate = estimatedRobotPose
-        SmartDashboard.putBoolean("Swerve/Vision/HasEstimate", estimate != null)
+        odometry.update(getHeading(), positions)
+        poseEstimator.update(getHeading(), positions)
 
-        if (estimate != null) {
-            poseEstimator.addVisionMeasurement(
-                estimate.estimatedPose.toPose2d(),
-                estimate.timestampSeconds
-            )
+        if (!isSim) {
+            val estimate = estimatedRobotPose
+            SmartDashboard.putBoolean("Swerve/Vision/HasEstimate", estimate != null)
+
+            if (estimate != null) {
+                poseEstimator.addVisionMeasurement(
+                    estimate.estimatedPose.toPose2d(),
+                    estimate.timestampSeconds
+                )
         }
-        publishSwerveTelemetry()
+            publishSwerveTelemetry()
+        }
+
     }
     // -- Commands --
 
@@ -271,6 +342,20 @@ class SwerveDriveSubsystem :  Drivetrain() {
         val speedY = ySpeed
         val speedAngular = rot
 
+        // -- Simulation Swerve Logic --
+        val speeds =
+            if (fieldRelative) {
+                ChassisSpeeds.fromFieldRelativeSpeeds(
+                        speedX, speedY, speedAngular, getHeading()
+                )
+            } else {
+                ChassisSpeeds(speedX, speedY, speedAngular)
+            }
+
+        commandedSpeeds = speeds
+        if (isSim) return
+
+        // -- Swerve Logic --
         val swerveStates =
             kinematics.toSwerveModuleStates(
                 if (fieldRelative) {
@@ -287,7 +372,7 @@ class SwerveDriveSubsystem :  Drivetrain() {
 
         SwerveDriveKinematics.desaturateWheelSpeeds(
             swerveStates,
-            MAX_SPEED.`in`(MetersPerSecond)
+            maxLinearSpeedMps
         )
 
         allModules.forEachIndexed { i, module -> module.desiredState = swerveStates[i] }
@@ -300,6 +385,8 @@ class SwerveDriveSubsystem :  Drivetrain() {
     }
 
     override fun buildAutoChooser(): SendableChooser<Command> {
+        if (isSim) return SendableChooser<Command>()
+
         val robotConfig = try {
             RobotConfig.fromGUISettings()
         } catch (e: Exception) {
@@ -340,4 +427,62 @@ class SwerveDriveSubsystem :  Drivetrain() {
                 addOption("Drive Forward (Manual)", DRIVE_FORWARD_COMMAND)
             }
     }
+
+    // -- Simulation --
+    private var commandedSpeeds = ChassisSpeeds()
+
+    private fun simModulePositions(): Array<SwerveModulePosition> {
+        val states = kinematics.toSwerveModuleStates(commandedSpeeds)
+        SwerveDriveKinematics.desaturateWheelSpeeds(
+            states,
+            maxLinearSpeedMps
+        )
+        return arrayOf(
+            SwerveModulePosition(simFL, states[0].angle),
+            SwerveModulePosition(simFR, states[1].angle),
+            SwerveModulePosition(simRL, states[2].angle),
+            SwerveModulePosition(simRR,states[3].angle)
+        )
+    }
+
+    override fun simulationPeriodic(dtSeconds: Double) {
+        if (!isSim) return
+
+        val dx = commandedSpeeds.vxMetersPerSecond * dtSeconds
+        val dy = commandedSpeeds.vyMetersPerSecond * dtSeconds
+        val dtheta = commandedSpeeds.omegaRadiansPerSecond * dtSeconds
+        
+        simyaw = simyaw.plus(Rotation2d(dtheta))
+
+        val states = kinematics.toSwerveModuleStates(commandedSpeeds)
+        SwerveDriveKinematics.desaturateWheelSpeeds(
+            states,
+            maxLinearSpeedMps
+        )
+
+        simFLVel = states[0].speedMetersPerSecond
+        simFRVel = states[1].speedMetersPerSecond
+        simRLVel = states[2].speedMetersPerSecond
+        simRRVel = states[3].speedMetersPerSecond
+
+        simFLAngleDeg = states[0].angle.degrees
+        simFRAngleDeg = states[1].angle.degrees
+        simRLAngleDeg = states[2].angle.degrees
+        simRRAngleDeg = states[3].angle.degrees
+
+        simFL += simFLVel * dtSeconds
+        simFR += simFRVel * dtSeconds
+        simRL += simRLVel * dtSeconds
+        simRR += simRRVel * dtSeconds
+
+        val fieldDelta = Translation2d(dx,dy)
+        simpose = Pose2d(simpose.translation.plus(fieldDelta), simyaw )
+
+        val simPoseNow = odometry.poseMeters
+        poseEstimator.resetPosition(simyaw, simModulePositions(), simPoseNow)
+
+        publishSwerveSimTelemetry(dtSeconds)
+    }
+
+    override fun getPose(): Pose2d = if (isSim) odometry.poseMeters else poseEstimator.estimatedPosition
 }
