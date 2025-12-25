@@ -17,6 +17,8 @@ import org.hangar84.robot2026.sim.SimField.publishOnce
 import org.hangar84.robot2026.sim.SimField.setRobotPose
 import org.hangar84.robot2026.sim.SimHooks
 import org.hangar84.robot2026.sim.SimRobotTypeSelector
+import org.hangar84.robot2026.sim.SimSensors
+import org.hangar84.robot2026.sim.SimState
 import org.hangar84.robot2026.sim.SimState.isSim
 import org.hangar84.robot2026.subsystems.Drivetrain
 import org.hangar84.robot2026.subsystems.LauncherSubsystem
@@ -118,6 +120,15 @@ object RobotContainer {
         val pose = drivetrain.getPose()
         setRobotPose(pose)
         publishGyroWidgets()
+
+        if (isSim) {
+            val truth = SimState.groundTruthPose
+            val est = SimState.estimatedPose
+
+            SimTelemetry.pose("Pose/Truth", truth)
+            SimTelemetry.pose("Pose/Estimated", est)
+            SimTelemetry.poseError("Pose/Error", truth, est)
+        }
     }
 
     private var lastYawDeg = 0.0
@@ -143,6 +154,7 @@ object RobotContainer {
 
     fun simulationPeriodic() {
         val dt = dtSeconds()
+        SimSensors.update(dt)
         drivetrain.simulationPeriodic(dt)
     }
 }

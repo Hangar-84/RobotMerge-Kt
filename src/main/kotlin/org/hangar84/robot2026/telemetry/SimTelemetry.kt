@@ -11,6 +11,19 @@ object SimTelemetry {
         SmartDashboard.putNumber("$prefix/RotDeg", pose.rotation.degrees)
     }
 
+    fun poseError(prefix: String, truth: Pose2d, est: Pose2d) {
+        SmartDashboard.putNumber("$prefix/dX", est.x - truth.x)
+        SmartDashboard.putNumber("$prefix/dY", est.y - truth.y)
+        SmartDashboard.putNumber("$prefix/dYawDeg", est.rotation.minus(truth.rotation).degrees)
+    }
+
+    fun poseCompare(prefix: String, truth: Pose2d, est: Pose2d) {
+        pose("$prefix/Truth", truth)
+        pose("$prefix/Estimated", est)
+        num("$prefix/ErrorXY", truth.translation.getDistance(est.translation))
+        num("$prefix/ErrorDeg", truth.rotation.minus(est.rotation).degrees)
+    }
+
     fun wheelVel(prefix: String, vx: Double, vy: Double, omega: Double) {
         SmartDashboard.putNumber("$prefix/Vx", vx)
         SmartDashboard.putNumber("$prefix/Vy", vy)

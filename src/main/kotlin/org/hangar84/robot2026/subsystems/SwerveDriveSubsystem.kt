@@ -10,6 +10,7 @@ import edu.wpi.first.apriltag.AprilTagFields
 import edu.wpi.first.hal.FRCNetComm.tInstances
 import edu.wpi.first.hal.FRCNetComm.tResourceType
 import edu.wpi.first.hal.HAL
+import edu.wpi.first.math.MathUtil
 import edu.wpi.first.math.VecBuilder
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator
 import edu.wpi.first.math.geometry.*
@@ -23,8 +24,11 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard
 import edu.wpi.first.wpilibj2.command.Command
 import edu.wpi.first.wpilibj2.command.Commands
 import org.hangar84.robot2026.constants.Constants.Swerve
+import org.hangar84.robot2026.sim.SimSensors
+import org.hangar84.robot2026.sim.SimState
+import org.hangar84.robot2026.sim.SimState.estimatedPose
 import org.hangar84.robot2026.sim.SimState.yaw as simyaw
-import org.hangar84.robot2026.sim.SimState.pose as simpose
+import org.hangar84.robot2026.sim.SimState.estimatedPose as simpose
 import org.hangar84.robot2026.sim.SimState.isSim
 import org.hangar84.robot2026.sim.SimState.simFL
 import org.hangar84.robot2026.sim.SimState.simFR
@@ -117,9 +121,14 @@ class SwerveDriveSubsystem :  Drivetrain() {
     private val rotation
         get() = if (isSim) simyaw else Rotation2d.fromDegrees(imu!!.getAngle(IMUAxis.kZ))
 
+    fun zeroHeading() {
+        if (isSim) SimSensors.zeroGyro()
+        else imu?.reset()
+    }
+
     override fun getHeading(): Rotation2d =
         if (isSim)
-            simyaw
+            SimSensors.measuredYaw()
         else
             rotation
 
@@ -310,6 +319,12 @@ class SwerveDriveSubsystem :  Drivetrain() {
             simRLAngleDeg,
             simRRAngleDeg
         )
+
+        SimTelemetry.poseCompare(
+            "Mecanum/PoseCompare",
+            SimState.groundTruthPose,
+            estimatedPose
+        )
     }
 
     override fun periodic() {
@@ -428,6 +443,12 @@ class SwerveDriveSubsystem :  Drivetrain() {
             }
     }
 
+    private fun stepAngleDeg(current: Double, target: Double, maxRate: Double, dt: Double): Double {
+        val error = MathUtil.angleModulus(target - current)
+        val delta = error.coerceIn(-maxRate * dt, maxRate * dt)
+        return current + delta
+    }
+
     // -- Simulation --
     private var commandedSpeeds = ChassisSpeeds()
 
@@ -451,8 +472,15 @@ class SwerveDriveSubsystem :  Drivetrain() {
         val dx = commandedSpeeds.vxMetersPerSecond * dtSeconds
         val dy = commandedSpeeds.vyMetersPerSecond * dtSeconds
         val dtheta = commandedSpeeds.omegaRadiansPerSecond * dtSeconds
-        
-        simyaw = simyaw.plus(Rotation2d(dtheta))
+
+        val newYawTruth = simyaw.plus(Rotation2d(dtheta))
+
+        // yaw rate (deg/sec) for gyro sim
+        val yawRateDegPerSecTruth = Math.toDegrees(commandedSpeeds.omegaRadiansPerSecond)
+
+        // Update sim sensor drift/bias
+        SimSensors.update(dtSeconds)
+        SimSensors.setTrueYaw(newYawTruth, yawRateDegPerSecTruth)
 
         val states = kinematics.toSwerveModuleStates(commandedSpeeds)
         SwerveDriveKinematics.desaturateWheelSpeeds(
@@ -465,21 +493,37 @@ class SwerveDriveSubsystem :  Drivetrain() {
         simRLVel = states[2].speedMetersPerSecond
         simRRVel = states[3].speedMetersPerSecond
 
-        simFLAngleDeg = states[0].angle.degrees
-        simFRAngleDeg = states[1].angle.degrees
-        simRLAngleDeg = states[2].angle.degrees
-        simRRAngleDeg = states[3].angle.degrees
+        simFLAngleDeg = stepAngleDeg(simFLAngleDeg, states[0].angle.degrees, 720.0, dtSeconds)
+        simFRAngleDeg = stepAngleDeg(simFRAngleDeg, states[1].angle.degrees, 720.0, dtSeconds)
+        simRLAngleDeg = stepAngleDeg(simRLAngleDeg, states[2].angle.degrees, 720.0, dtSeconds)
+        simRRAngleDeg = stepAngleDeg(simRRAngleDeg, states[3].angle.degrees, 720.0, dtSeconds)
 
         simFL += simFLVel * dtSeconds
         simFR += simFRVel * dtSeconds
         simRL += simRLVel * dtSeconds
         simRR += simRRVel * dtSeconds
 
-        val fieldDelta = Translation2d(dx,dy)
-        simpose = Pose2d(simpose.translation.plus(fieldDelta), simyaw )
+        simyaw = newYawTruth
+        val fieldDelta = Translation2d(dx, dy).rotateBy(simyaw.minus(Rotation2d(dtheta)))
+        simpose = Pose2d(simpose.translation + fieldDelta, simyaw)
 
-        val simPoseNow = odometry.poseMeters
-        poseEstimator.resetPosition(simyaw, simModulePositions(), simPoseNow)
+        // Build "measured" module positions + measured gyro
+        val yawMeas = SimSensors.measuredYaw()
+
+        val positionMeas = arrayOf(
+            SwerveModulePosition(simFL + 0.0, states[0].angle),
+            SwerveModulePosition(simFR + 0.0, states[1].angle),
+            SwerveModulePosition(simRL + 0.0, states[2].angle),
+            SwerveModulePosition(simRR + 0.0, states[3].angle),
+        )
+
+        // Update odometry/poseEstimator with MEASURED sensors
+        odometry.update(yawMeas, positionMeas)
+        poseEstimator.update(yawMeas, positionMeas)
+
+        // Store for comparison widgets
+        SimState.groundTruthPose = simpose
+        estimatedPose = poseEstimator.estimatedPosition
 
         publishSwerveSimTelemetry(dtSeconds)
     }

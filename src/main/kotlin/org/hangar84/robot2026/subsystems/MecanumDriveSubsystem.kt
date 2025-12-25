@@ -6,7 +6,6 @@ import com.pathplanner.lib.config.RobotConfig
 import com.pathplanner.lib.controllers.PPHolonomicDriveController
 import com.revrobotics.spark.config.SparkMaxConfig
 import edu.wpi.first.math.VecBuilder
-import edu.wpi.first.math.controller.PIDController
 import edu.wpi.first.math.estimator.MecanumDrivePoseEstimator
 import edu.wpi.first.math.geometry.Pose2d
 import edu.wpi.first.math.geometry.Rotation2d
@@ -22,6 +21,9 @@ import edu.wpi.first.wpilibj2.command.Commands
 import org.hangar84.robot2026.constants.Constants.Mecanum
 import org.hangar84.robot2026.mecanum.MecanumConfigs.driveConfig
 import org.hangar84.robot2026.mecanum.MecanumModule
+import org.hangar84.robot2026.sim.SimSensors
+import org.hangar84.robot2026.sim.SimState
+import org.hangar84.robot2026.sim.SimState.estimatedPose
 import org.hangar84.robot2026.sim.SimState.isSim
 import org.hangar84.robot2026.sim.SimState.simFL
 import org.hangar84.robot2026.sim.SimState.simFLVel
@@ -34,7 +36,7 @@ import org.hangar84.robot2026.sim.SimState.simRRVel
 import org.hangar84.robot2026.telemetry.SimTelemetry
 import org.hangar84.robot2026.telemetry.Telemetry
 import kotlin.jvm.optionals.getOrNull
-import org.hangar84.robot2026.sim.SimState.pose as simpose
+import org.hangar84.robot2026.sim.SimState.estimatedPose as simpose
 import org.hangar84.robot2026.sim.SimState.yaw as simyaw
 
 /*import org.photonvision.PhotonCamera
@@ -65,13 +67,18 @@ class MecanumDriveSubsystem :  Drivetrain() {
     private val rotation2d
         get() = if (isSim) simyaw else Rotation2d.fromDegrees(imu!!.getAngle(imu.yawAxis))
 
+    fun zeroHeading() {
+        if (isSim) SimSensors.zeroGyro()
+        else imu?.reset()
+    }
+
     override fun getHeading(): Rotation2d =
         if (isSim)
-            simyaw
+            SimSensors.measuredYaw()
         else
             rotation2d
 
-    var mecanumDrive: MecanumDrive =
+    var drive: MecanumDrive =
         MecanumDrive(
             flMotor.motor, rlMotor.motor,
             frMotor.motor, rrMotor.motor
@@ -82,20 +89,20 @@ class MecanumDriveSubsystem :  Drivetrain() {
     private var rearLeftLocation: Translation2d = Translation2d(-0.833, 1.200)
     private var rearRightLocation: Translation2d = Translation2d(-0.833, -1.200)
 
-    private val mecanumDriveKinematics: MecanumDriveKinematics = MecanumDriveKinematics(
+    private val kinematics: MecanumDriveKinematics = MecanumDriveKinematics(
         frontLeftLocation, frontRightLocation,
         rearLeftLocation, rearRightLocation
     )
 
-    private var mecanumDriveOdometry: MecanumDriveOdometry =
+    private var odometry: MecanumDriveOdometry =
         MecanumDriveOdometry(
-            mecanumDriveKinematics,
+            kinematics,
             getHeading(),
-            mecanumDriveWheelPositions(),
+            wheelPositions(),
             Pose2d()
         )
 
-    private fun mecanumDriveWheelPositions(): MecanumDriveWheelPositions =
+    private fun wheelPositions(): MecanumDriveWheelPositions =
         MecanumDriveWheelPositions(
             flMotor.positionMeters,
             frMotor.positionMeters,
@@ -104,9 +111,9 @@ class MecanumDriveSubsystem :  Drivetrain() {
         )
 
     private var poseEstimator: MecanumDrivePoseEstimator = MecanumDrivePoseEstimator(
-        mecanumDriveKinematics,
+        kinematics,
         getHeading(),
-        mecanumDriveWheelPositions(),
+        wheelPositions(),
         Pose2d(),
         VecBuilder.fill(0.1, 0.1, 0.1), // State standard deviations
         VecBuilder.fill(1.0, 1.0, 1.0), // Vision standard deviations
@@ -125,17 +132,12 @@ class MecanumDriveSubsystem :  Drivetrain() {
             Rotation3d(0.0, 0.0, 0.0),
         )*/
 
-    private val frontLeftVelocityPIDController: PIDController = PIDController(0.0001, 0.0, 0.0)
-    private val frontRightVelocityPIDController: PIDController = PIDController(0.0002, 0.0, 0.0)
-    private val rearLeftVelocityPIDController: PIDController = PIDController(0.001, 0.000004, 0.007)
-    private val rearRightVelocityPIDController: PIDController = PIDController(0.0013, 0.000004, 0.007)
-
     val chassisSpeeds: ChassisSpeeds
         get() =
-            mecanumDriveKinematics.toChassisSpeeds(
+            kinematics.toChassisSpeeds(
                 MecanumDriveWheelSpeeds(
                     flMotor.velocityMeters, frMotor.velocityMeters,
-                    rlMotor.velocityMeters, rrMotor.positionMeters
+                    rlMotor.velocityMeters, rrMotor.velocityMeters
                 )
             )
 
@@ -144,10 +146,6 @@ class MecanumDriveSubsystem :  Drivetrain() {
             { drive(0.0, 0.3, 0.0, false) },
             this).withTimeout(2.5)
     init {
-        SmartDashboard.putData("Front Left PID Controller", frontLeftVelocityPIDController)
-        SmartDashboard.putData("Front Right PID Controller", frontRightVelocityPIDController)
-        SmartDashboard.putData("Rear Left PID Controller", rearLeftVelocityPIDController)
-        SmartDashboard.putData("Rear Right PID Controller", rearRightVelocityPIDController)
         if (!isSim) {
             SmartDashboard.putData("IMU", imu)
         }
@@ -195,10 +193,10 @@ class MecanumDriveSubsystem :  Drivetrain() {
         // Optional “motor outputs” (what you told the robot to do)
         SimTelemetry.speedMPS(
             "Mecanum/Sim/Motor/VoltsCmd",
-            frontLeftVelocityPIDController.setpoint,
-            frontRightVelocityPIDController.setpoint,
-            rearLeftVelocityPIDController.setpoint,
-            rearRightVelocityPIDController.setpoint
+            flMotor.velocityMeters,
+            frMotor.velocityMeters,
+            rlMotor.velocityMeters,
+            rrMotor.velocityMeters
         )
 
         SimTelemetry.wheelEncoders(
@@ -206,14 +204,20 @@ class MecanumDriveSubsystem :  Drivetrain() {
             simFL, simFR, simRL, simRR,
             simFLVel, simFRVel, simRLVel, simRRVel
         )
+        SimTelemetry.poseCompare(
+            "Mecanum/PoseCompare",
+            SimState.groundTruthPose,
+            estimatedPose
+        )
+
     }
 
     override fun periodic() {
 
-        val wheelPositions =
-            if (isSim) simWheelPositions() else mecanumDriveWheelPositions()
+        val wheelPositions = if (isSim) simWheelPositions() else wheelPositions()
+        if (isSim) return
 
-        mecanumDriveOdometry.update(
+        odometry.update(
             getHeading(),
             wheelPositions
         )
@@ -223,7 +227,7 @@ class MecanumDriveSubsystem :  Drivetrain() {
 
     fun driveRelative(relativeSpeeds: ChassisSpeeds) {
 
-        val wheelSpeeds = mecanumDriveKinematics.toWheelSpeeds(relativeSpeeds)
+        val wheelSpeeds = kinematics.toWheelSpeeds(relativeSpeeds)
 
         flMotor.setVelocityMps(wheelSpeeds.frontLeftMetersPerSecond)
         frMotor.setVelocityMps(wheelSpeeds.frontRightMetersPerSecond)
@@ -243,7 +247,7 @@ class MecanumDriveSubsystem :  Drivetrain() {
         if (isSim) return
 
         // -- Mecanum Logic --
-        mecanumDrive.driveCartesian(ySpeed, xSpeed, rot, rotation2d)
+        drive.driveCartesian(ySpeed, xSpeed, rot)
     }
 
     override fun buildAutoChooser(): SendableChooser<Command> {
@@ -260,8 +264,8 @@ class MecanumDriveSubsystem :  Drivetrain() {
             { poseEstimator.estimatedPosition},
             // resetPose =
             { pose ->
-                val wheelPos = if (isSim) simWheelPositions() else mecanumDriveWheelPositions()
-                mecanumDriveOdometry.resetPosition(getHeading(), wheelPos, pose)
+                val wheelPos = if (isSim) simWheelPositions() else wheelPositions()
+                odometry.resetPosition(getHeading(), wheelPos, pose)
                 poseEstimator.resetPose(pose)
             },
             // IntelliJ is off its rocker here. The spread operator works here, is practically required, and compiles.
@@ -299,6 +303,11 @@ class MecanumDriveSubsystem :  Drivetrain() {
             simRR
         )
 
+    private fun applyMotorLag(current: Double, target: Double, dt: Double): Double {
+        val tau = 0.15 // motor time constant
+        return current + (target - current) * (dt / tau)
+    }
+
     override fun simulationPeriodic(dtSeconds: Double) {
         if (!isSim) return
 
@@ -307,28 +316,47 @@ class MecanumDriveSubsystem :  Drivetrain() {
         val dy = commandedSpeeds.vyMetersPerSecond * dtSeconds
         val dtheta = commandedSpeeds.omegaRadiansPerSecond * dtSeconds
 
-        simyaw = simyaw.plus(Rotation2d(dtheta))
+        val newYawTruth = simyaw.plus(Rotation2d(dtheta))
 
-        val ws = mecanumDriveKinematics.toWheelSpeeds(commandedSpeeds)
+        // yaw rate (deg/sec) for gyro sim
+        val yawRateDegPerSecTruth = Math.toDegrees(commandedSpeeds.omegaRadiansPerSecond)
 
-        simFLVel = ws.frontLeftMetersPerSecond
-        simFRVel = ws.frontRightMetersPerSecond
-        simRLVel = ws.rearLeftMetersPerSecond
-        simRRVel = ws.rearRightMetersPerSecond
+        // Update sim sensor drift/bias
+        SimSensors.update(dtSeconds)
+        SimSensors.setTrueYaw(newYawTruth, yawRateDegPerSecTruth)
+
+        val ws = kinematics.toWheelSpeeds(commandedSpeeds)
+
+        simFLVel = applyMotorLag(simFLVel, ws.frontLeftMetersPerSecond, dtSeconds)
+        simFRVel = applyMotorLag(simFRVel, ws.frontRightMetersPerSecond, dtSeconds)
+        simRLVel = applyMotorLag(simRLVel, ws.rearLeftMetersPerSecond, dtSeconds)
+        simRRVel = applyMotorLag(simRRVel, ws.rearRightMetersPerSecond, dtSeconds)
         
         simFL += simFLVel * dtSeconds
         simFR += simFRVel * dtSeconds
         simRL += simRLVel * dtSeconds
         simRR += simRRVel * dtSeconds
 
-        val fieldDelta = Translation2d(dx, dy).rotateBy(simyaw)
-        simpose = Pose2d(simpose.translation.plus(fieldDelta), simyaw)
+        simyaw = newYawTruth
+        val fieldDelta = Translation2d(dx, dy).rotateBy(simyaw.minus(Rotation2d(dtheta)))
+        simpose = Pose2d(simpose.translation + fieldDelta, simyaw)
 
-        val simPoseNow = mecanumDriveOdometry.poseMeters
-        poseEstimator.resetPosition(simyaw, simWheelPositions(), simPoseNow)
+        // Build "measured" module positions + measured gyro
+        val yawMeas = SimSensors.measuredYaw()
+
+        val positionMeas = simWheelPositions()
+
+
+        // Update odometry/poseEstimator with MEASURED sensors
+        odometry.update(yawMeas, positionMeas)
+        poseEstimator.update(yawMeas, positionMeas)
+
+        // Store for comparison widgets
+        SimState.groundTruthPose = simpose
+        estimatedPose = poseEstimator.estimatedPosition
 
         publishMecanumSimTelemetry(dtSeconds)
     }
 
-    override fun getPose(): Pose2d = if (isSim) mecanumDriveOdometry.poseMeters else poseEstimator.estimatedPosition
+    override fun getPose(): Pose2d = poseEstimator.estimatedPosition
 }

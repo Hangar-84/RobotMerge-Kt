@@ -8,8 +8,8 @@ import org.hangar84.robot2026.constants.RobotType
 object SimRobotTypeSelector {
     // Switch the RobotType."DriveBase" that you want to use to setDefaultOption and put the other one to addOption
     private val chooser = SendableChooser<RobotType>().apply {
-        setDefaultOption("Swerve", RobotType.MECANUM)
-        addOption("Mecanum", RobotType.SWERVE)
+        setDefaultOption("Swerve", RobotType.SWERVE)
+        addOption("Mecanum", RobotType.MECANUM)
     }
     private var published = false
 

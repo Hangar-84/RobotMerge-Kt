@@ -8,8 +8,15 @@ object SimState {
     val isSim get() = RobotBase.isSimulation()
 
     // -- Common States among the two DriveSubsystems
-    var pose = Pose2d()
+    var groundTruthPose: Pose2d = Pose2d()
+    var estimatedPose = Pose2d()
     var yaw = Rotation2d()
+
+    val fl = SimSensors.EncoderTruth()
+    val fr = SimSensors.EncoderTruth()
+    val rl = SimSensors.EncoderTruth()
+    val rr = SimSensors.EncoderTruth()
+
 
     // Wheel distances (meters)
     var simFL = 0.0
