@@ -1,6 +1,9 @@
 package org.hangar84.robot2026
 
 import edu.wpi.first.math.MathUtil
+import edu.wpi.first.math.filter.SlewRateLimiter
+import edu.wpi.first.math.geometry.Pose2d
+import edu.wpi.first.math.geometry.Rotation2d
 import edu.wpi.first.wpilibj.DigitalInput
 import edu.wpi.first.wpilibj.DriverStation
 import edu.wpi.first.wpilibj.RobotBase
@@ -26,6 +29,7 @@ import org.hangar84.robot2026.subsystems.MecanumDriveSubsystem
 import org.hangar84.robot2026.subsystems.SwerveDriveSubsystem
 import org.hangar84.robot2026.telemetry.SimTelemetry
 import org.hangar84.robot2026.telemetry.Telemetry
+import kotlin.math.withSign
 
 
 object RobotContainer {
@@ -64,6 +68,25 @@ object RobotContainer {
 
 
     init {
+        if (isSim) {
+            val startPose = Pose2d(1.113225, 5.742683, Rotation2d.fromDegrees(0.0))
+
+            // Reset drivetrain (odometry + estimators + sim truth)
+            drivetrain.resetPose(startPose)
+
+            // Reset sim gyro truth to match
+            SimSensors.setTrueYaw(startPose.rotation, 0.0)
+            SimSensors.zeroGyro()
+
+            // Publish Field2d and set it initially (optional)
+            setupDashboard()
+            setRobotPose(startPose)
+
+            // keep SimState consistent if you're using it for comparisons
+            SimState.groundTruthPose = startPose
+            SimState.estimatedPose = startPose
+        }
+
         SmartDashboard.putString("Selected Robot Type", robotType.name)
         SmartDashboard.putData("Auto Chooser", autoChooser)
 
@@ -79,16 +102,22 @@ object RobotContainer {
 
     }
     private fun configureBindings() {
-        /*val x: Double = MathUtil.applyDeadband(-controller.leftX, DRIVEDEADBAND)
-        val y: Double = MathUtil.applyDeadband(-controller.leftY, DRIVEDEADBAND)
-        val rot: Double = MathUtil.applyDeadband(controller.rightX, DRIVEDEADBAND)*/
+
+        val xLimiter = SlewRateLimiter(3.0)   // m/s^2 style feel
+        val yLimiter = SlewRateLimiter(3.0)
+        val rotLimiter = SlewRateLimiter(6.0) // rad/s^2 feel (or deg/s^2)
+
+        fun shapedAxis(raw: Double): Double {
+            val db = MathUtil.applyDeadband(raw, DRIVEDEADBAND)
+            return (db * db).withSign(db) // square for finer control near center
+        }
 
         if (robotType == RobotType.MECANUM) {
             drivetrain.defaultCommand =  driveCommand(
                 drivetrain,
-                { MathUtil.applyDeadband(controller.leftX, DRIVEDEADBAND) },
-                { MathUtil.applyDeadband(-controller.leftY, DRIVEDEADBAND) },
-                { MathUtil.applyDeadband(controller.rightX, DRIVEDEADBAND) },
+                { xLimiter.calculate(shapedAxis(-controller.leftX)) },
+                { yLimiter.calculate(shapedAxis(-controller.leftY)) },
+                { rotLimiter.calculate(shapedAxis(-controller.rightX)) },
                 { false }
             )
         } else if (robotType == RobotType.SWERVE){
@@ -97,9 +126,9 @@ object RobotContainer {
             drivetrain.defaultCommand =
                 driveCommand(
                 drivetrain,
-                { MathUtil.applyDeadband(-controller.leftY, DRIVEDEADBAND) * maxV},
-                { MathUtil.applyDeadband(-controller.leftX, DRIVEDEADBAND) * maxV },
-                { MathUtil.applyDeadband(controller.rightX, DRIVEDEADBAND) * maxW},
+                { xLimiter.calculate(shapedAxis(-controller.leftY)) * maxV},
+                { yLimiter.calculate(shapedAxis(-controller.leftX)) * maxV },
+                { rotLimiter.calculate(shapedAxis(controller.rightX)) * maxW},
                 { true }
             )
             val swerve = drivetrain as SwerveDriveSubsystem
@@ -125,9 +154,9 @@ object RobotContainer {
             val truth = SimState.groundTruthPose
             val est = SimState.estimatedPose
 
-            SimTelemetry.pose("Pose/Truth", truth)
-            SimTelemetry.pose("Pose/Estimated", est)
-            SimTelemetry.poseError("Pose/Error", truth, est)
+            SimTelemetry.pose("Sim/Pose/Truth", truth)
+            SimTelemetry.pose("Sim/Pose/Estimated", est)
+            SimTelemetry.poseError("Sim/Pose/Error", truth, est)
         }
     }
 
@@ -139,13 +168,27 @@ object RobotContainer {
         val now = Timer.getFPGATimestamp()
         val dt = now - lastYawTime
 
+        val deltaDeg = yaw.minus(Rotation2d.fromDegrees(lastYawDeg)).degrees
+
         val yawRateDegPerSec =
-            if (dt > 1e-6) (yaw.degrees - lastYawDeg) / dt else 0.0
-        if (isSim)
-            SimTelemetry.gyro("Gyro", yaw, yawRateDegPerSec)
-        else if (!isSim)
+            if (isSim) {
+                SimSensors.measuredYawRateDegPerSec()
+            } else {
+                if (dt > 1e-6) deltaDeg / dt else 0.0
+            }
+        if (isSim) {
+            SimTelemetry.gyroTrue(
+                "Sim/TrueGyro",
+                SimSensors.trueYaw,
+                SimSensors.measuredYaw(),
+                SimSensors.trueYawRateDegPerSec
+            )
+            SimTelemetry.gyro("Sim/Gyro", yaw, yawRateDegPerSec)
+        } else {
             Telemetry.gyro("Gyro", yaw, yawRateDegPerSec)
-        SmartDashboard.putNumber("Gyro/PoseYawDeg", drivetrain.getPose().rotation.degrees)
+            SmartDashboard.putNumber("Gyro/PoseYawDeg", drivetrain.getPose().rotation.degrees)
+        }
+
 
         lastYawDeg = yaw.degrees
         lastYawTime = now
@@ -154,7 +197,6 @@ object RobotContainer {
 
     fun simulationPeriodic() {
         val dt = dtSeconds()
-        SimSensors.update(dt)
         drivetrain.simulationPeriodic(dt)
     }
 }
