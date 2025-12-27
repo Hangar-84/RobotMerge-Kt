@@ -3,6 +3,7 @@ package org.hangar84.robot2026.telemetry
 import edu.wpi.first.math.geometry.Pose2d
 import edu.wpi.first.math.geometry.Rotation2d
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard
+import org.hangar84.robot2026.sim.SimSensors
 
 object SimTelemetry {
     fun pose(prefix: String, pose: Pose2d) {
@@ -61,6 +62,11 @@ object SimTelemetry {
     fun gyro(prefix: String, yaw: Rotation2d, yawRateDegPerSec: Double) {
         SmartDashboard.putNumber("$prefix/YawDeg", yaw.degrees)
         SmartDashboard.putNumber("$prefix/YawRateDegPerSec", yawRateDegPerSec)
+    }
+    fun gyroTrue(prefix: String, trueYaw: Rotation2d, yaw: Rotation2d, trueYawRateDegPerSec: Double) {
+        SmartDashboard.putNumber("$prefix/TrueYawDeg", trueYaw.degrees)
+        SmartDashboard.putNumber("$prefix/MeasuredYawDeg", yaw.degrees)
+        SmartDashboard.putNumber("$prefix/TrueYawRateDegPerSec", trueYawRateDegPerSec)
     }
     fun num(key: String, value: Double) = SmartDashboard.putNumber(key, value)
     fun bool(key: String, value: Boolean) = SmartDashboard.putBoolean(key, value)
