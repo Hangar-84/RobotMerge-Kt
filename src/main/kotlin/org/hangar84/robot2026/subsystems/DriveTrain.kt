@@ -15,6 +15,8 @@ abstract class Drivetrain : SubsystemBase() {
     abstract fun buildAutoChooser(): SendableChooser<Command>
 
     abstract fun getHeading(): Rotation2d
+    abstract fun resetPose(pose: Pose2d)
+    abstract fun zeroHeading()
 
     open fun getPose(): Pose2d = Pose2d()
 
