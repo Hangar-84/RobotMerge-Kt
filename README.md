@@ -172,6 +172,9 @@ src/
 │       └── org/hangar84/robot2026/
 │           ├── commands/        # Reusable drive and robot commands
 │           ├── constants/       # Robot constants and configuration values
+│           ├── io/              # Robot hardware interfaces
+│           │    ├── real/       # Actual robot hardware
+│           │    └── sim/        # Simulated robot hardware
 │           ├── mecanum/         # Mecanum drivetrain implementation
 │           ├── sim/             # Custom simulation framework (state, sensors, field)
 │           ├── subsystems/      # Shared subsystem interfaces and implementations
