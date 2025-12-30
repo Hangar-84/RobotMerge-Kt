@@ -24,7 +24,7 @@ object SimTelemetry {
         num("$prefix/ErrorDeg", truth.rotation.minus(est.rotation).degrees)
     }
 
-    fun wheelVel(prefix: String, vx: Double, vy: Double, omega: Double) {
+    fun chassisVel(prefix: String, vx: Double, vy: Double, omega: Double) {
         SmartDashboard.putNumber("$prefix/Vx", vx)
         SmartDashboard.putNumber("$prefix/Vy", vy)
         SmartDashboard.putNumber("$prefix/Omega", omega)
@@ -66,6 +66,19 @@ object SimTelemetry {
         SmartDashboard.putNumber("$prefix/TrueYawDeg", trueYaw.degrees)
         SmartDashboard.putNumber("$prefix/MeasuredYawDeg", yaw.degrees)
         SmartDashboard.putNumber("$prefix/TrueYawRateDegPerSec", trueYawRateDegPerSec)
+    }
+
+    fun launcher(
+        prefix: String,
+        leftAppliedOutput: Double, rightAppliedOutput: Double,
+        leftVelocityRpm: Double, rightVelocityRpm: Double,
+        leftCurrentAmps: Double, rightCurrentAmps: Double) {
+        SmartDashboard.putNumber("$prefix/LeftOutput", leftAppliedOutput)
+        SmartDashboard.putNumber("$prefix/RightOutput", rightAppliedOutput)
+        SmartDashboard.putNumber("$prefix/LeftRPM", leftVelocityRpm)
+        SmartDashboard.putNumber("$prefix/RightRPM", rightVelocityRpm)
+        SmartDashboard.putNumber("$prefix/LeftCurrent", leftCurrentAmps)
+        SmartDashboard.putNumber("$prefix/RightCurrent", rightCurrentAmps)
     }
     fun num(key: String, value: Double) = SmartDashboard.putNumber(key, value)
     fun bool(key: String, value: Boolean) = SmartDashboard.putBoolean(key, value)
