@@ -163,11 +163,13 @@ Each pose:
 src/
 ├── main/
 │   ├──deploy/
-│   |   └── pathplanner/
-│   |        ├── autos/           # Autonomous routines
-│   |        ├── paths/           # PathPlanner path files
-│   |        ├── navgrid.json     # Navigation grid
-│   |        └── settings.json    # PathPlanner settings
+│   |   ├── pathplanner/
+│   |   |    ├── autos/           # Autonomous routines
+│   |   |    ├── paths/           # PathPlanner path files
+│   |   |    ├── navgrid.json     # Navigation grid
+│   |   |
+|   |   └── telemetry/
+|   |            └── telemetry.json # Telemetry configuration
 │   └── kotlin/
 │       └── org/hangar84/robot2026/
 │           ├── commands/        # Reusable drive and robot commands
