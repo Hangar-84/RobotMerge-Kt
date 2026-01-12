@@ -28,7 +28,7 @@ object Robot : TimedRobot() {
 
     override fun autonomousInit() {
         autonomousCommand = RobotContainer.autonomousCommand
-        autonomousCommand?.schedule()
+        CommandScheduler.getInstance().schedule(autonomousCommand)
     }
 
     override fun autonomousPeriodic() {
