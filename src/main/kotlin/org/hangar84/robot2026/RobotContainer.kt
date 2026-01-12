@@ -16,14 +16,17 @@ import org.hangar84.robot2026.commands.driveCommand
 import org.hangar84.robot2026.constants.RobotType
 import org.hangar84.robot2026.io.GyroIO
 import org.hangar84.robot2026.io.MecanumIO
+import org.hangar84.robot2026.io.PneumaticsIO
 import org.hangar84.robot2026.io.SwerveIO
 import org.hangar84.robot2026.io.real.AdisGyroIO
+import org.hangar84.robot2026.io.real.CtreTwoValvePnematicsIO
 import org.hangar84.robot2026.io.real.MaxSwerveIO
 import org.hangar84.robot2026.io.real.RevMecanumIO
 import org.hangar84.robot2026.io.real.RevMechanisimIO
 import org.hangar84.robot2026.io.sim.SimGyroIO
 import org.hangar84.robot2026.io.sim.SimMecanumIO
 import org.hangar84.robot2026.io.sim.SimMechanismIO
+import org.hangar84.robot2026.io.sim.SimPneumaticsIO
 import org.hangar84.robot2026.io.sim.SimSwerveIO
 import org.hangar84.robot2026.sim.*
 import org.hangar84.robot2026.sim.SimClock.dtSeconds
@@ -33,6 +36,7 @@ import org.hangar84.robot2026.sim.SimState.isSim
 import org.hangar84.robot2026.subsystems.Drivetrain
 import org.hangar84.robot2026.subsystems.LauncherSubsystem
 import org.hangar84.robot2026.subsystems.MecanumDriveSubsystem
+import org.hangar84.robot2026.subsystems.PneumaticsSubsystem
 import org.hangar84.robot2026.subsystems.SwerveDriveSubsystem
 import org.hangar84.robot2026.telemetry.TelemetryRouter
 import kotlin.math.withSign
@@ -48,7 +52,7 @@ object RobotContainer {
     )
 
     private fun readBootSelector(): RobotType {
-        return if (!buttonA.get()) {
+        return if (buttonA.get()) {
             RobotType.SWERVE
         } else {
             RobotType.MECANUM
@@ -84,6 +88,16 @@ object RobotContainer {
 
     val autonomousCommand: Command
         get() = autoChooser.selected ?: InstantCommand()
+
+    val pneumaticsIO: PneumaticsIO =
+        if (isSim) SimPneumaticsIO()
+    else CtreTwoValvePnematicsIO(
+        0,
+        0,
+        1
+    )
+
+    val pneumatics = PneumaticsSubsystem(pneumaticsIO)
 
 
     init {
@@ -165,6 +179,10 @@ object RobotContainer {
 
         controller.leftTrigger().onTrue(launcher.INTAKE_COMMAND).onFalse(launcher.STOP_COMMAND)
         controller.rightTrigger().onTrue(launcher.LAUNCH_COMMAND).onFalse(launcher.STOP_COMMAND)
+
+        controller.a().onTrue(pneumatics.toggleCommand())
+        controller.x().onTrue(pneumatics.extendCommand())
+        controller.b().onTrue(pneumatics.retractCommand())
     }
 
     // -- Simulation --

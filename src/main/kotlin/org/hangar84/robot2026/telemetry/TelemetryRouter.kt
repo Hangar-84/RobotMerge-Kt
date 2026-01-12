@@ -197,6 +197,38 @@ object TelemetryRouter {
         }
     }
 
+    fun pneumatics(
+        compressorEnabled: Boolean,
+        extendSolenoidOn: Boolean,
+        retractSolenoidOn: Boolean,
+        state: String,
+        pressurePsi: Double? = null
+    ) {
+
+        if (!shouldPublish("pneumatics")) return
+        val prefix = TelemetryConfig.prefix("pneumatics", "Pneumatics")
+
+        TelemetrySinks.publishBoolean("$base/CompressorEnabled", compressorEnabled)
+        TelemetrySinks.publishBoolean("$base/ExtendSolenoidOn", extendSolenoidOn)
+        TelemetrySinks.publishBoolean("$base/RetractSolenoidOn", retractSolenoidOn)
+        TelemetrySinks.publishString("$base/State", state)
+
+        if (isSim) {
+
+            SimTelemetry.pneumatics(
+                prefix,
+                compressorEnabled, state,
+                extendSolenoidOn, retractSolenoidOn, pressurePsi
+            )
+        } else {
+
+            // optional if you have a pressure sensor later
+            if (pressurePsi != null) {
+                TelemetrySinks.publishNumber("$base/Pneumatics/PressurePsi", pressurePsi)
+            }
+        }
+    }
+
     fun num(key: String, value: Double) {
         if (!shouldPublish("debug")) return
 
