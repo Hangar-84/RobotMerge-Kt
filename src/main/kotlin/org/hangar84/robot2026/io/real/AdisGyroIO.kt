@@ -9,10 +9,12 @@ import org.hangar84.robot2026.io.GyroIO.Inputs
 class AdisGyroIO: GyroIO {
     private val imu = ADIS16470_IMU()
 
-    override fun updateInputs(inputs: Inputs) {
-        inputs.yaw = Rotation2d.fromDegrees(imu.getAngle(IMUAxis.kZ))
+    private val yawOffsetDeg = 90.0
 
-        inputs.yawRateDegPerSec
+    override fun updateInputs(inputs: Inputs) {
+        val rawYawDeg = imu.getAngle(IMUAxis.kZ)
+        inputs.yaw = Rotation2d.fromDegrees(rawYawDeg - yawOffsetDeg)
+        inputs.yawRateDegPerSec = imu.getRate(IMUAxis.kZ)
     }
 
     override fun zeroYaw() {
