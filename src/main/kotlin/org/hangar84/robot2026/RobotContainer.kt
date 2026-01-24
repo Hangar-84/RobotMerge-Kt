@@ -1,5 +1,7 @@
 package org.hangar84.robot2026
 
+import CtreTwoValvePnematicsIO
+import com.pathplanner.lib.auto.NamedCommands
 import edu.wpi.first.math.MathUtil
 import edu.wpi.first.math.filter.SlewRateLimiter
 import edu.wpi.first.math.geometry.Rotation2d
@@ -10,22 +12,20 @@ import edu.wpi.first.wpilibj.Timer
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard
 import edu.wpi.first.wpilibj2.command.Command
+import edu.wpi.first.wpilibj2.command.Commands
 import edu.wpi.first.wpilibj2.command.InstantCommand
+import edu.wpi.first.wpilibj2.command.WaitCommand
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController
 import org.hangar84.robot2026.commands.driveCommand
+import org.hangar84.robot2026.constants.Constants
 import org.hangar84.robot2026.constants.RobotType
 import org.hangar84.robot2026.io.GyroIO
 import org.hangar84.robot2026.io.MecanumIO
 import org.hangar84.robot2026.io.PneumaticsIO
 import org.hangar84.robot2026.io.SwerveIO
-import org.hangar84.robot2026.io.real.AdisGyroIO
-import org.hangar84.robot2026.io.real.CtreTwoValvePnematicsIO
-import org.hangar84.robot2026.io.real.MaxSwerveIO
-import org.hangar84.robot2026.io.real.RevMecanumIO
-import org.hangar84.robot2026.io.real.RevMechanisimIO
+import org.hangar84.robot2026.io.real.*
 import org.hangar84.robot2026.io.sim.SimGyroIO
 import org.hangar84.robot2026.io.sim.SimMecanumIO
-import org.hangar84.robot2026.io.sim.SimMechanismIO
 import org.hangar84.robot2026.io.sim.SimPneumaticsIO
 import org.hangar84.robot2026.io.sim.SimSwerveIO
 import org.hangar84.robot2026.sim.*
@@ -33,11 +33,7 @@ import org.hangar84.robot2026.sim.SimClock.dtSeconds
 import org.hangar84.robot2026.sim.SimField.publishOnce
 import org.hangar84.robot2026.sim.SimField.setRobotPose
 import org.hangar84.robot2026.sim.SimState.isSim
-import org.hangar84.robot2026.subsystems.Drivetrain
-import org.hangar84.robot2026.subsystems.LauncherSubsystem
-import org.hangar84.robot2026.subsystems.MecanumDriveSubsystem
-import org.hangar84.robot2026.subsystems.PneumaticsSubsystem
-import org.hangar84.robot2026.subsystems.SwerveDriveSubsystem
+import org.hangar84.robot2026.subsystems.*
 import org.hangar84.robot2026.telemetry.TelemetryRouter
 import kotlin.math.withSign
 
@@ -48,8 +44,53 @@ object RobotContainer {
     private val buttonA = DigitalInput(19)
 
     val launcher = LauncherSubsystem(
-        if (RobotBase.isSimulation()) SimMechanismIO() else RevMechanisimIO()
+        RevLauncherIO()
     )
+
+    val intake = IntakeSubsystem(
+         RevIntakeIO()
+    )
+
+    val pneumaticsIO: PneumaticsIO =
+        if (isSim) SimPneumaticsIO()
+        else CtreTwoValvePnematicsIO(
+            pcmCanId = Constants.Pneumatics.PCM_CAN_ID,
+            aExtend = Constants.Pneumatics.A_EXTEND_CHANNEL,
+            aRetract = Constants.Pneumatics.A_RETRACT_CHANNEL,
+            bExtend = Constants.Pneumatics.B_EXTEND_CHANNEL,
+            bRetract = Constants.Pneumatics.B_RETRACT_CHANNEL,
+        )
+
+    val pneumatics = PneumaticsSubsystem(pneumaticsIO)
+
+    private fun registerPathplannerEvents() {
+        NamedCommands.registerCommand(
+            "OctupleLaunch",
+            Commands.sequence(
+                launcher.pulseCommand(.25),
+                Commands.waitSeconds(.4), // Laundh 1st ball.
+                launcher.pulseCommand(.25),
+                Commands.waitSeconds(.4), // Launch 2nd ball.
+                launcher.pulseCommand(.25),
+                Commands.waitSeconds(.4), // Launch 3rd ball.
+                launcher.pulseCommand(.25),
+                Commands.waitSeconds(.4), // Launch 4th ball.
+                launcher.pulseCommand(.25),
+                Commands.waitSeconds(.4), // Launch 5th ball.
+                launcher.pulseCommand(.25),
+                Commands.waitSeconds(.4), // Launch 6th ball.
+                launcher.pulseCommand(.25),
+                Commands.waitSeconds(.4), // Launch 7th ball.
+                launcher.pulseCommand(.25),
+                Commands.waitSeconds(.4), // Launch 8th ball.
+                launcher.pulseCommand(.25),
+                )
+        )
+
+        NamedCommands.registerCommand("Lift", pneumatics.extendBothCommand())
+
+        NamedCommands.registerCommand("Retract", pneumatics.retractBothCommand())
+    }
 
     private fun readBootSelector(): RobotType {
         return if (buttonA.get()) {
@@ -69,7 +110,9 @@ object RobotContainer {
     // The robot's subsystems
     val drivetrain: Drivetrain = when (robotType) {
         RobotType.SWERVE -> {
-            val gyro: GyroIO = if (isSim) SimGyroIO() else AdisGyroIO()
+            val gyro: GyroIO = if (isSim) SimGyroIO() else AdisGyroIO().apply {
+                setYawAdjustmentDegrees(90.0)
+            }
             val swerve: SwerveIO = if (isSim) SimSwerveIO() else MaxSwerveIO()
             SwerveDriveSubsystem(swerve, gyro)
         }
@@ -82,22 +125,12 @@ object RobotContainer {
     }
     // The driver's controller
 
-    private val autoChooser: SendableChooser<Command> = drivetrain.buildAutoChooser()
+    private var autoChooser: SendableChooser<Command>? = null
 
 
 
     val autonomousCommand: Command
-        get() = autoChooser.selected ?: InstantCommand()
-
-    val pneumaticsIO: PneumaticsIO =
-        if (isSim) SimPneumaticsIO()
-    else CtreTwoValvePnematicsIO(
-        0,
-        0,
-        1
-    )
-
-    val pneumatics = PneumaticsSubsystem(pneumaticsIO)
+        get() = autoChooser?.selected ?: InstantCommand()
 
 
     init {
@@ -127,6 +160,10 @@ object RobotContainer {
 
             //SimField.leftRedPose()
         }
+
+        registerPathplannerEvents()
+
+        autoChooser = drivetrain.buildAutoChooser()
 
         SmartDashboard.putString("Selected Robot Type", robotType.name)
         SmartDashboard.putData("Auto Chooser", autoChooser)
@@ -177,12 +214,12 @@ object RobotContainer {
             }
         }
 
-        controller.leftTrigger().onTrue(launcher.INTAKE_COMMAND).onFalse(launcher.STOP_COMMAND)
-        controller.rightTrigger().onTrue(launcher.LAUNCH_COMMAND).onFalse(launcher.STOP_COMMAND)
+        controller.leftTrigger(0.1).whileTrue(intake.INTAKE_COMMAND)
+        controller.rightTrigger(0.1).whileTrue(launcher.LAUNCH_COMMAND)
 
-        controller.a().onTrue(pneumatics.toggleCommand())
-        controller.x().onTrue(pneumatics.extendCommand())
-        controller.b().onTrue(pneumatics.retractCommand())
+        controller.a().onTrue(pneumatics.toggleBothCommand())
+        controller.x().onTrue(pneumatics.extendBothCommand())
+        controller.b().onTrue(pneumatics.retractBothCommand())
     }
 
     // -- Simulation --
