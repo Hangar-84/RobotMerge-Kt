@@ -3,35 +3,47 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 1.4066547406082288,
-        "y": 7.239516994633274
+        "x": 3.527,
+        "y": 3.991
       },
       "prevControl": null,
       "nextControl": {
-        "x": 1.5657956503097459,
-        "y": 7.000328216782876
+        "x": 3.322507118211753,
+        "y": 4.134814676921161
       },
-      "isLocked": false,
+      "isLocked": true,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 3.191449016100179,
-        "y": 4.043112701252236
+        "x": 1.418325301204819,
+        "y": 3.991
       },
       "prevControl": {
-        "x": 2.5766176381064656,
-        "y": 5.059218507332701
+        "x": 2.53444266393113,
+        "y": 3.897877144766588
       },
       "nextControl": null,
-      "isLocked": false,
+      "isLocked": true,
       "linkedName": null
     }
   ],
   "rotationTargets": [],
   "constraintZones": [],
   "pointTowardsZones": [],
-  "eventMarkers": [],
+  "eventMarkers": [
+    {
+      "name": "Lift",
+      "waypointRelativePos": 1.0,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Lift"
+        }
+      }
+    }
+  ],
   "globalConstraints": {
     "maxVelocity": 3.0,
     "maxAcceleration": 3.0,
@@ -42,7 +54,7 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 0.0
+    "rotation": 177.97863505964403
   },
   "reversed": false,
   "folder": null,
