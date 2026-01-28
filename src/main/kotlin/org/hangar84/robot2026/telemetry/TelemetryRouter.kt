@@ -179,7 +179,6 @@ object TelemetryRouter {
         leftAppliedOutput: Double, rightAppliedOutput: Double,
         leftVelocityRpm: Double, rightVelocityRpm: Double,
         leftCurrentAmps: Double, rightCurrentAmps: Double) {
-        if (isSim) {
             if (!shouldPublish("launcher")) return
 
             publish("$base/LeftOutput", leftAppliedOutput)
@@ -189,11 +188,45 @@ object TelemetryRouter {
             publish("$base/LeftCurrent", leftCurrentAmps)
             publish("$base/RightCurrent", rightCurrentAmps)
 
-            SimTelemetry.launcher(TelemetryConfig.prefix("launcher", "Launchers"),
+        if (isSim) {
+            SimTelemetry.launcher(
+                TelemetryConfig.prefix("launcher", "Launchers"),
                 leftAppliedOutput, rightAppliedOutput,
                 leftVelocityRpm, rightVelocityRpm,
                 leftCurrentAmps, rightCurrentAmps
             )
+        }
+    }
+
+    fun pneumatics(
+        compressorEnabled: Boolean,
+        extendSolenoidOn: Boolean,
+        retractSolenoidOn: Boolean,
+        state: String,
+        pressurePsi: Double? = null
+    ) {
+
+        if (!shouldPublish("pneumatics")) return
+        val prefix = TelemetryConfig.prefix("pneumatics", "Pneumatics")
+
+        TelemetrySinks.publishBoolean("$base/CompressorEnabled", compressorEnabled)
+        TelemetrySinks.publishBoolean("$base/ExtendSolenoidOn", extendSolenoidOn)
+        TelemetrySinks.publishBoolean("$base/RetractSolenoidOn", retractSolenoidOn)
+        TelemetrySinks.publishString("$base/State", state)
+
+        if (isSim) {
+
+            SimTelemetry.pneumatics(
+                prefix,
+                compressorEnabled, state,
+                extendSolenoidOn, retractSolenoidOn, pressurePsi
+            )
+        } else {
+
+            // optional if you have a pressure sensor later
+            if (pressurePsi != null) {
+                TelemetrySinks.publishNumber("$base/Pneumatics/PressurePsi", pressurePsi)
+            }
         }
     }
 

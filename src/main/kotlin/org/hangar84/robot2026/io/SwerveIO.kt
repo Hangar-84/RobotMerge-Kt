@@ -8,7 +8,10 @@ interface SwerveIO {
         var drivePosMeters: Double = 0.0,
         var driveVelMps: Double = 0.0,
         var turnPosRad: Double = 0.0,
-        var turnVelRadPerSec: Double = 0.0
+        var turnVelRadPerSec: Double = 0.0,
+
+        var driveAppliedVolts: Double = 0.0,
+        var driveCurrentAmps: Double = 0.0
     )
 
     data class Inputs(

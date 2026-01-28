@@ -2,6 +2,7 @@ package org.hangar84.robot2026.io.sim
 
 import org.hangar84.robot2026.io.MecanumIO
 import org.hangar84.robot2026.sim.SimState
+import kotlin.math.abs
 
 class SimMecanumIO : MecanumIO {
 
@@ -47,5 +48,19 @@ class SimMecanumIO : MecanumIO {
         inputs.frVelMps = SimState.simFRVel
         inputs.rlVelMps = SimState.simRLVel
         inputs.rrVelMps = SimState.simRRVel
+
+        // --- simulate electrical data ---
+        inputs.flAppliedVolts = cmdFL * 3.0
+        inputs.frAppliedVolts = cmdFR * 3.0
+        inputs.rlAppliedVolts = cmdRL * 3.0
+        inputs.rrAppliedVolts = cmdRR * 3.0
+
+        // Simulating current:
+        fun simAmps(speed: Double) = abs(speed * 5.0) + (if (abs(speed) > 0.1) 1.5 else 0.0)
+
+        inputs.flCurrentAmps = simAmps(SimState.simFLVel)
+        inputs.frCurrentAmps = simAmps(SimState.simFRVel)
+        inputs.rlCurrentAmps = simAmps(SimState.simRLVel)
+        inputs.rrCurrentAmps = simAmps(SimState.simRRVel)
     }
 }

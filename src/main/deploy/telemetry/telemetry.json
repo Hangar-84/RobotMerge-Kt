@@ -7,6 +7,7 @@
     "wheels": true,
     "motors": true,
     "launcher": true,
+    "pneumatics": true,
     "debug": true
   },
   "prefix": {
@@ -16,7 +17,8 @@
     "chassis": "Chassis",
     "wheels": "Wheels",
     "motors": "Motors",
-    "launcher": "Launcher"
+    "launcher": "Launcher",
+    "pneumatics": "Pneumatics"
   },
   "rateHz": {
     "ds": 10,
@@ -26,6 +28,7 @@
     "wheels": 10,
     "motors": 25,
     "launcher": 25,
+    "pneumatics":25,
     "debug": 5
   }
 }

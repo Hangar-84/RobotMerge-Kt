@@ -3,35 +3,47 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 2.0,
-        "y": 7.0
+        "x": 0.3174668230960742,
+        "y": 6.16590361445783
       },
       "prevControl": null,
       "nextControl": {
-        "x": 3.0,
-        "y": 7.0
+        "x": 0.6748158193639079,
+        "y": 6.071529604792292
       },
       "isLocked": false,
-      "linkedName": null
+      "linkedName": "Intake "
     },
     {
       "anchor": {
-        "x": 4.0,
-        "y": 6.0
+        "x": 3.527,
+        "y": 3.991
       },
       "prevControl": {
-        "x": 3.0,
-        "y": 6.0
+        "x": 3.789657751234028,
+        "y": 3.9070779025633597
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": null
+      "linkedName": "Hub"
     }
   ],
   "rotationTargets": [],
   "constraintZones": [],
   "pointTowardsZones": [],
-  "eventMarkers": [],
+  "eventMarkers": [
+    {
+      "name": "OctupleLaunch",
+      "waypointRelativePos": 1.0,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "OctupleLaunch"
+        }
+      }
+    }
+  ],
   "globalConstraints": {
     "maxVelocity": 3.0,
     "maxAcceleration": 3.0,
@@ -42,7 +54,7 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 0.0
+    "rotation": -179.2355821774337
   },
   "reversed": false,
   "folder": null,

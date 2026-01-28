@@ -1,26 +1,31 @@
 package org.hangar84.robot2026.subsystems
 
 import edu.wpi.first.wpilibj.RobotBase
+import edu.wpi.first.wpilibj2.command.Command
 import edu.wpi.first.wpilibj2.command.Commands
 import edu.wpi.first.wpilibj2.command.SubsystemBase
-import org.hangar84.robot2026.io.MechanisimIO
+import org.hangar84.robot2026.io.LauncherIO
 import org.hangar84.robot2026.telemetry.TelemetryRouter
 
-class LauncherSubsystem(val io: MechanisimIO) : SubsystemBase() {
+class LauncherSubsystem(val io: LauncherIO) : SubsystemBase() {
 
-    private val inputs = MechanisimIO.Inputs()
+    private val inputs = LauncherIO.Inputs()
 
     private val isSim = RobotBase.isSimulation()
 
     // - Commands -
+
+    // Only used for controller input.
     internal val LAUNCH_COMMAND
-        get() = Commands.runOnce({ io.setPercent(1.0)}, this)
+        get() = Commands.startEnd(
+            { io.setPercent(1.0) },
+            { io.stop() },
+            this
+        )
 
-    internal val INTAKE_COMMAND
-        get() = Commands.runOnce({ io.setPercent(-1.0)}, this)
-
-    internal val STOP_COMMAND
-        get() = Commands.runOnce({ io.stop() }, this)
+    // Only used for Pathplanenr Named Commands.
+    fun pulseCommand(seconds: Double): Command =
+        LAUNCH_COMMAND.withTimeout(seconds)
 
     override fun periodic() {
         TelemetryRouter.setBase(

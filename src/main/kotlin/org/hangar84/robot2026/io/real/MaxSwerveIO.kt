@@ -11,9 +11,12 @@ import org.hangar84.robot2026.swerve.SwerveConfigs.turningConfig
 
 class MaxSwerveIO : SwerveIO {
 
-    // SparkMax + encoder live ONLY here
-
     private val rrDrivingConfig = SparkMaxConfig().apply {
+        apply(drivingConfig)
+        inverted(true)
+    }
+
+    private val rlDrivingConfig = SparkMaxConfig().apply {
         apply(drivingConfig)
         inverted(true)
     }
@@ -25,7 +28,6 @@ class MaxSwerveIO : SwerveIO {
         drivingConfig,
         turningConfig
     )
-
 
     private val fr: MAXSwerveModule = MAXSwerveModule(
         Swerve.FRONT_RIGHT_DRIVING_ID,
@@ -54,13 +56,18 @@ class MaxSwerveIO : SwerveIO {
     override fun updateInputs(inputs: SwerveIO.Inputs) {
         fun copy(module: MAXSwerveModule, out: SwerveIO.ModuleInputs) {
             val pos = module.position
-            val state = module.desiredState
+            // Driving encoder velocity
+            val vel = module.drivingController.encoder.velocity
 
             out.drivePosMeters = pos.distanceMeters
-            out.driveVelMps = state.speedMetersPerSecond
+            out.driveVelMps = vel
             out.turnPosRad = pos.angle.radians
-
             out.turnVelRadPerSec = 0.0
+
+            // --- Real Hardware Telemetry ---
+            out.driveAppliedVolts = module.drivingController.appliedOutput * module.drivingController.busVoltage
+            out.driveCurrentAmps = module.drivingController.outputCurrent
+
         }
 
         copy(fl, inputs.fl)

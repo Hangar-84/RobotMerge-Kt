@@ -2,11 +2,19 @@ package org.hangar84.robot2026.constants
 
 object Constants {
 
+    object Pneumatics {
+        const val PCM_CAN_ID = 0          // <-- your CTRE PCM CAN ID
+        const val A_EXTEND_CHANNEL = 0      // solenoid channel
+        const val A_RETRACT_CHANNEL = 1
+        const val B_EXTEND_CHANNEL = 3      // solenoid channel
+        const val B_RETRACT_CHANNEL = 2// solenoid channel
+    }
+
     object Mecanum {
-        const val FRONT_LEFT_ID = 12
-        const val FRONT_RIGHT_ID = 11
-        const val REAR_LEFT_ID = 13
-        const val REAR_RIGHT_ID = 14
+        const val FRONT_LEFT_ID = 9
+        const val FRONT_RIGHT_ID = 10
+        const val REAR_LEFT_ID = 11
+        const val REAR_RIGHT_ID = 12
     }
 
     object Swerve {

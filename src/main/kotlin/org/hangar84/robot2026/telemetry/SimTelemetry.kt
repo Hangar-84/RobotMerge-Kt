@@ -80,6 +80,23 @@ object SimTelemetry {
         SmartDashboard.putNumber("$prefix/LeftCurrent", leftCurrentAmps)
         SmartDashboard.putNumber("$prefix/RightCurrent", rightCurrentAmps)
     }
+
+    fun pneumatics(
+        prefix: String,
+        compresserEnabled: Boolean,
+        actuatorState: String,
+        extendOn: Boolean,
+        retractOn: Boolean,
+        pressurePsi: Double?
+    ) {
+        SmartDashboard.putString("$prefix/ActuatorState", actuatorState)
+        SmartDashboard.putBoolean("$prefix/ExtendOn", extendOn)
+        SmartDashboard.putBoolean("$prefix/RetractOn", retractOn)
+        SmartDashboard.putBoolean("$prefix/CompresorEnabled", compresserEnabled)
+        if (pressurePsi != null) {
+            SmartDashboard.putNumber("$prefix/PSI", pressurePsi)
+        }
+    }
     fun num(key: String, value: Double) = SmartDashboard.putNumber(key, value)
     fun bool(key: String, value: Boolean) = SmartDashboard.putBoolean(key, value)
 }
