@@ -12,21 +12,42 @@ class RevMecanumIO : MecanumIO {
         apply(driveConfig)
         inverted(true)
     }
+
     private val fl = MecanumModule("FL", Mecanum.FRONT_LEFT_ID, driveConfig)
     private val fr = MecanumModule("FR", Mecanum.FRONT_RIGHT_ID, driveConfig)
     private val rl = MecanumModule("RL", Mecanum.REAR_LEFT_ID, driveConfig)
     private val rr = MecanumModule("RR", Mecanum.REAR_RIGHT_ID, rrConfig)
 
     override fun updateInputs(inputs: MecanumIO.Inputs) {
+        // Positions
         inputs.flPosMeters = fl.positionMeters
         inputs.frPosMeters = fr.positionMeters
         inputs.rlPosMeters = rl.positionMeters
         inputs.rrPosMeters = rr.positionMeters
 
+        // Velocities
         inputs.flVelMps = fl.velocityMeters
         inputs.frVelMps = fr.velocityMeters
         inputs.rlVelMps = rl.velocityMeters
         inputs.rrVelMps = rr.velocityMeters
+
+        // --- Voltage and Current ---
+
+        // Front Left
+        inputs.flAppliedVolts = fl.motor.appliedOutput * fl.motor.busVoltage
+        inputs.flCurrentAmps = fl.motor.outputCurrent
+
+        // Front Right
+        inputs.frAppliedVolts = fr.motor.appliedOutput * fr.motor.busVoltage
+        inputs.frCurrentAmps = fr.motor.outputCurrent
+
+        // Rear Left
+        inputs.rlAppliedVolts = rl.motor.appliedOutput * rl.motor.busVoltage
+        inputs.rlCurrentAmps = rl.motor.outputCurrent
+
+        // Rear Right
+        inputs.rrAppliedVolts = rr.motor.appliedOutput * rr.motor.busVoltage
+        inputs.rrCurrentAmps = rr.motor.outputCurrent
     }
 
     override fun setWheelSpeeds(
