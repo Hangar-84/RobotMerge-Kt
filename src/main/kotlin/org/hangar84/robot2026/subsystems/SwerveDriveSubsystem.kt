@@ -78,7 +78,6 @@ class SwerveDriveSubsystem(
         Translation3d(Inches.of(-8.0), Inches.of(9.0), Inches.of(12.0)),
         Rotation3d(0.0, 0.0, 0.0)
     )
-
     private val photonEstimator = PhotonPoseEstimator(fieldLayout, cameraOffset)
 
     private val estimatedRobotPose: EstimatedRobotPose?
@@ -112,7 +111,7 @@ class SwerveDriveSubsystem(
     override fun zeroHeading() = gyroIO.zeroYaw()
     override fun getPose(): Pose2d = if (isSim) odometry.poseMeters else poseEstimator.estimatedPosition
 
-    // --- getChassisSpeeds ---
+    // --- Implementation of getChassisSpeeds ---
     override fun getChassisSpeeds(): ChassisSpeeds {
         return kinematics.toChassisSpeeds(*moduleStatesFromInputs())
     }
@@ -158,6 +157,12 @@ class SwerveDriveSubsystem(
         publishSwerveTelemetry()
     }
 
+    private fun formatAngle(angleDegrees: Double): Double {
+        var wrapped = angleDegrees % 360.0
+        if (wrapped < 0) wrapped += 360.0
+        return wrapped
+    }
+
     private fun publishSwerveTelemetry() {
         val pose = getPose()
         val chassis = getChassisSpeeds()
@@ -167,12 +172,32 @@ class SwerveDriveSubsystem(
         TelemetryRouter.num("${robotType.name}/YawDeg", getHeading().degrees)
         TelemetryRouter.pose(pose)
 
-        // Global Orientation and Speed for NetworkTables
         val table = NetworkTableInstance.getDefault().getTable("SwerveDrive")
-        table.getEntry("GlobalOrientation").setDouble(pose.rotation.degrees)
-        val speedMps = Math.hypot(chassis.vxMetersPerSecond, chassis.vyMetersPerSecond)
-        table.getEntry("LinearVelocityMps").setDouble(speedMps)
+        table.getEntry(".type").setString("SwerveDrive")
 
+        val measuredData = DoubleArray(8)
+        for (i in 0..3) {
+            measuredData[i * 2] = formatAngle(currentStates[i].angle.degrees)
+            measuredData[i * 2 + 1] = currentStates[i].speedMetersPerSecond
+        }
+        table.getEntry("ModuleStates").setDoubleArray(measuredData)
+
+        val dataTable = table.getSubTable("ModuleData")
+        val names = arrayOf("FL", "FR", "RL", "RR")
+        for (i in 0..3) {
+            val cleanAngle = formatAngle(currentStates[i].angle.degrees)
+            dataTable.getEntry("${names[i]}_Angle_Deg").setDouble(cleanAngle)
+            dataTable.getEntry("${names[i]}_Speed_Mps").setDouble(currentStates[i].speedMetersPerSecond)
+        }
+
+        val powerTable = table.getSubTable("Power")
+        val inputs = arrayOf(swerveInputs.fl, swerveInputs.fr, swerveInputs.rl, swerveInputs.rr)
+        for (i in 0..3) {
+            powerTable.getEntry("${names[i]}_Drive_Amps").setDouble(inputs[i].driveCurrentAmps)
+            powerTable.getEntry("${names[i]}_Volts").setDouble(inputs[i].driveAppliedVolts)
+        }
+
+        // 4. Standard Telemetry Router Helpers
         TelemetryRouter.chassisVel(chassis.vxMetersPerSecond, chassis.vyMetersPerSecond, chassis.omegaRadiansPerSecond)
         TelemetryRouter.wheelEncoders(
             swerveInputs.fl.drivePosMeters, swerveInputs.fr.drivePosMeters,
@@ -208,7 +233,7 @@ class SwerveDriveSubsystem(
         }
 
         AutoBuilder.configure(
-            { poseEstimator.estimatedPosition },
+            { getPose() },
             { resetPose(it) },
             { getChassisSpeeds() },
             this::driveRelative,
@@ -218,7 +243,7 @@ class SwerveDriveSubsystem(
             this
         )
         return AutoBuilder.buildAutoChooser().apply {
-            addOption("Drive Forward (Manual)", DRIVE_FORWARD_COMMAND)
+            addOption("Drive_Forward", DRIVE_FORWARD_COMMAND)
         }
     }
 
