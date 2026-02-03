@@ -14,6 +14,7 @@ class MaxSwerveIO : SwerveIO {
     private val rrDrivingConfig = SparkMaxConfig().apply {
         apply(drivingConfig)
         inverted(true)
+        smartCurrentLimit(40)
     }
 
     private val rlDrivingConfig = SparkMaxConfig().apply {
