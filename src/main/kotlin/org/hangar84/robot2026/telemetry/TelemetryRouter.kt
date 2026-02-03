@@ -5,6 +5,7 @@ import edu.wpi.first.math.geometry.Rotation2d
 import edu.wpi.first.wpilibj.RobotBase
 import edu.wpi.first.wpilibj.Timer
 import org.hangar84.robot2026.RobotContainer.robotType
+import org.hangar84.robot2026.constants.Constants
 
 object TelemetryRouter {
     private val isSim = RobotBase.isSimulation()
@@ -158,76 +159,59 @@ object TelemetryRouter {
         }
     }
 
-    fun angleDeg(fl: Double, fr: Double, rl: Double, rr: Double) {
-        if (isSim) {
-            if (!shouldPublish("motors")) return
-
-            publish("$base/AngleDeg/FL", fl)
-            publish("$base/AngleDeg/FR", fr)
-            publish("$base/AngleDeg/RL", rl)
-            publish("$base/AngleDeg/RR", rr)
-
-
-            SimTelemetry.angleDeg(
-                TelemetryConfig.prefix("motors", "Motors"),
-                fl, fr, rl, rr
-            )
-        } else return
-    }
-
     fun launcher(
-        leftAppliedOutput: Double, rightAppliedOutput: Double,
-        leftVelocityRpm: Double, rightVelocityRpm: Double,
-        leftCurrentAmps: Double, rightCurrentAmps: Double) {
-            if (!shouldPublish("launcher")) return
+        leftAppliedOutput: Double,
+        rightAppliedOutput: Double,
+        leftCurrentAmps: Double,
+        rightCurrentAmps: Double,
+        leftTempCelsius: Double,
+        rightTempCelsius: Double
+    ) {
+        if (!shouldPublish("launcher")) return
 
-            publish("$base/LeftOutput", leftAppliedOutput)
-            publish("$base/RightOutput", rightAppliedOutput)
-            publish("$base/LeftRPM", leftVelocityRpm)
-            publish("$base/RightRPM", rightVelocityRpm)
-            publish("$base/LeftCurrent", leftCurrentAmps)
-            publish("$base/RightCurrent", rightCurrentAmps)
+        val table = edu.wpi.first.networktables.NetworkTableInstance.getDefault()
+            .getTable("Mechanism/Launcher")
 
-        if (isSim) {
-            SimTelemetry.launcher(
-                TelemetryConfig.prefix("launcher", "Launchers"),
-                leftAppliedOutput, rightAppliedOutput,
-                leftVelocityRpm, rightVelocityRpm,
-                leftCurrentAmps, rightCurrentAmps
-            )
-        }
+        table.getEntry("LeftAppliedVoltage").setDouble(leftAppliedOutput * 12.0)
+        table.getEntry("RightAppliedVoltage").setDouble(rightAppliedOutput * 12.0)
+        table.getEntry("LeftCurrentAmps").setDouble(leftCurrentAmps)
+        table.getEntry("RightCurrentAmps").setDouble(rightCurrentAmps)
+        table.getEntry("LeftTempCelsius").setDouble(leftTempCelsius)
+        table.getEntry("RightTempCelsius").setDouble(rightTempCelsius)
     }
 
-    fun pneumatics(
-        compressorEnabled: Boolean,
-        extendSolenoidOn: Boolean,
-        retractSolenoidOn: Boolean,
-        state: String,
-        pressurePsi: Double? = null
+    fun Intake(
+        leftAppliedOutput: Double,
+        leftCurrentAmps: Double,
+        leftTempCelsius: Double,
     ) {
+        if (!shouldPublish("Intake")) return
 
-        if (!shouldPublish("pneumatics")) return
-        val prefix = TelemetryConfig.prefix("pneumatics", "Pneumatics")
+        val table = edu.wpi.first.networktables.NetworkTableInstance.getDefault()
+            .getTable("Mechanism/Intake")
 
-        TelemetrySinks.publishBoolean("$base/CompressorEnabled", compressorEnabled)
-        TelemetrySinks.publishBoolean("$base/ExtendSolenoidOn", extendSolenoidOn)
-        TelemetrySinks.publishBoolean("$base/RetractSolenoidOn", retractSolenoidOn)
-        TelemetrySinks.publishString("$base/State", state)
+        table.getEntry("LeftAppliedVoltage").setDouble(leftAppliedOutput * 12.0)
+        table.getEntry("LeftCurrentAmps").setDouble(leftCurrentAmps)
+        table.getEntry("LeftTempCelsius").setDouble(leftTempCelsius)
+    }
 
-        if (isSim) {
+    fun Phneumatics(
+        CompressorEnabled: Boolean,
+        Left_Solenoid_Extend: Boolean,
+        Left_Solenoid_Retract: Boolean,
+        Right_Solenoid_Extend: Boolean,
+        Right_Solenoid_Retract: Boolean,
+    ) {
+        if (!shouldPublish("Pneumatics")) return
 
-            SimTelemetry.pneumatics(
-                prefix,
-                compressorEnabled, state,
-                extendSolenoidOn, retractSolenoidOn, pressurePsi
-            )
-        } else {
+        val Pneumatics_Table = edu.wpi.first.networktables.NetworkTableInstance.getDefault()
+            .getTable("Mechanism/Pneumatics")
 
-            // optional if you have a pressure sensor later
-            if (pressurePsi != null) {
-                TelemetrySinks.publishNumber("$base/Pneumatics/PressurePsi", pressurePsi)
-            }
-        }
+        Pneumatics_Table.getEntry("Compressor Enabled").setBoolean(CompressorEnabled)
+        Pneumatics_Table.getEntry("Left Solenoid Extend").setBoolean(Left_Solenoid_Extend)
+        Pneumatics_Table.getEntry("Left Solenoid Retract").setBoolean(Left_Solenoid_Retract)
+        Pneumatics_Table.getEntry("Right Solenoid Extend").setBoolean(Right_Solenoid_Extend)
+        Pneumatics_Table.getEntry("Right Solenoid Retract").setBoolean(Right_Solenoid_Retract)
     }
 
     fun num(key: String, value: Double) {
