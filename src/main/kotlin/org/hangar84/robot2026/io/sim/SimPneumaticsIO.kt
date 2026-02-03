@@ -4,25 +4,33 @@ import org.hangar84.robot2026.io.PneumaticsIO
 
 class SimPneumaticsIO : PneumaticsIO {
 
-    private var aState = PneumaticsIO.State.NEUTRAL
-    private var bState = PneumaticsIO.State.NEUTRAL
+    private var LeftState = PneumaticsIO.State.NEUTRAL
+    private var RightState = PneumaticsIO.State.NEUTRAL
+
+    private var compressorActive = true
 
     override fun updateInputs(inputs: PneumaticsIO.Inputs) {
-        inputs.aState = aState
-        inputs.bState = bState
+        inputs.Left = LeftState
+        inputs.Right = RightState
 
-        inputs.aExtendOn = (aState == PneumaticsIO.State.EXTEND)
-        inputs.aRetractOn = (aState == PneumaticsIO.State.RETRACT)
+        inputs.CompressorEnabled = compressorActive
 
-        inputs.bExtendOn = (bState == PneumaticsIO.State.EXTEND)
-        inputs.bRetractOn = (bState == PneumaticsIO.State.RETRACT)
+        inputs.Left_Solenoid_Extend = (LeftState == PneumaticsIO.State.EXTEND)
+        inputs.Left_Solenoid_Retract = (LeftState != PneumaticsIO.State.EXTEND)
+
+        inputs.Right_Solenoid_Extend = (RightState == PneumaticsIO.State.EXTEND)
+        inputs.Right_Solenoid_Retract = (RightState != PneumaticsIO.State.EXTEND)
     }
 
-    override fun setA(state: PneumaticsIO.State) {
-        aState = state
+    override fun Left(state: PneumaticsIO.State) {
+        LeftState = state
     }
 
-    override fun setB(state: PneumaticsIO.State) {
-        bState = state
+    override fun Right(state: PneumaticsIO.State) {
+        RightState = state
+    }
+
+    override fun setCompressor(enabled: Boolean) {
+        compressorActive = enabled
     }
 }
