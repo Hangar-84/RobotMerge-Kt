@@ -17,9 +17,11 @@ class RevLauncherIO : LauncherIO {
 
     init {
         val rightCfg = SparkMaxConfig().apply {
+            smartCurrentLimit(20)
         }
         val leftCfg = SparkMaxConfig().apply {
             inverted(true)
+            smartCurrentLimit(20)
         }
         leftLaunch.configure(leftCfg, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters)
         rightLaunch.configure(rightCfg, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters)
@@ -31,21 +33,12 @@ class RevLauncherIO : LauncherIO {
     }
 
     override fun updateInputs(inputs: LauncherIO.Inputs) {
+        inputs.leftAppliedOutput = leftLaunch.appliedOutput
+        inputs.leftCurrentAmps = leftLaunch.outputCurrent
+        inputs.leftTempCelsius = leftLaunch.motorTemperature
 
-        val leftLauncherMotorVolts = leftLaunch.busVoltage
-        val rightLauncherMotorVolts = rightLaunch.busVoltage
-
-        val leftLauncherMotorAppliedVolts = inputs.leftAppliedOutput * leftLauncherMotorVolts
-        val rightLauncherMotorAppliedVolts = inputs.rightAppliedOutput * rightLauncherMotorVolts
-
-        SmartDashboard.putNumber("Launcher Left CurrentAmps", inputs.leftCurrentAmps)
-        SmartDashboard.putNumber("Launcher Left AppliedVolts", leftLauncherMotorAppliedVolts)
-        SmartDashboard.putNumber("Launcher Left TempCelsius", leftLaunch.motorTemperature)
-
-        SmartDashboard.putNumber("Launcher Right CurrentAmps", inputs.rightCurrentAmps)
-        SmartDashboard.putNumber("Launcher Right AppliedVolts", rightLauncherMotorAppliedVolts)
-        SmartDashboard.putNumber("Launcher Right TempCelsius", rightLaunch.motorTemperature)
-
-        SmartDashboard.putNumber("SystemBusVoltage", leftLauncherMotorVolts)
+        inputs.rightAppliedOutput = rightLaunch.appliedOutput
+        inputs.rightCurrentAmps = rightLaunch.outputCurrent
+        inputs.rightTempCelsius = rightLaunch.motorTemperature
     }
 }
