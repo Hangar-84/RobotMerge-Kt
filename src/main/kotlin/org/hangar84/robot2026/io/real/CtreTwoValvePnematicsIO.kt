@@ -1,3 +1,4 @@
+import edu.wpi.first.wpilibj.PneumaticsControlModule
 import edu.wpi.first.wpilibj.PneumaticsModuleType
 import edu.wpi.first.wpilibj.Solenoid
 import org.hangar84.robot2026.io.PneumaticsIO
@@ -8,39 +9,54 @@ class CtreTwoValvePnematicsIO(
     bExtend: Int, bRetract: Int,
 ) : PneumaticsIO {
 
-    private val aExt = Solenoid(pcmCanId, PneumaticsModuleType.CTREPCM, aExtend)
-    private val aRet = Solenoid(pcmCanId, PneumaticsModuleType.CTREPCM, aRetract)
+    private val pcm = PneumaticsControlModule(pcmCanId)
+    private val LeftExt = Solenoid(pcmCanId, PneumaticsModuleType.CTREPCM, aExtend)
+    private val LeftRet = Solenoid(pcmCanId, PneumaticsModuleType.CTREPCM, aRetract)
 
-    private val bExt = Solenoid(pcmCanId, PneumaticsModuleType.CTREPCM, bExtend)
-    private val bRet = Solenoid(pcmCanId, PneumaticsModuleType.CTREPCM, bRetract)
+    private val RightExt = Solenoid(pcmCanId, PneumaticsModuleType.CTREPCM, bExtend)
+    private val RightRet = Solenoid(pcmCanId, PneumaticsModuleType.CTREPCM, bRetract)
 
-    private var aState = PneumaticsIO.State.NEUTRAL
-    private var bState = PneumaticsIO.State.NEUTRAL
+    private var LeftState = PneumaticsIO.State.NEUTRAL
+    private var RightState = PneumaticsIO.State.NEUTRAL
 
-    override fun setA(state: PneumaticsIO.State) {
-        aState = state
+    override fun Left(state: PneumaticsIO.State) {
+        LeftState = state
         when (state) {
-            PneumaticsIO.State.EXTEND -> { aRet.set(false); aExt.set(true) }
-            PneumaticsIO.State.RETRACT -> { aExt.set(false); aRet.set(true) }
-            PneumaticsIO.State.NEUTRAL -> { aExt.set(false); aRet.set(false) }
+            PneumaticsIO.State.EXTEND -> { LeftRet.set(false); LeftExt.set(true) }
+            PneumaticsIO.State.RETRACT -> { LeftExt.set(false); LeftRet.set(true) }
+            PneumaticsIO.State.NEUTRAL -> { LeftExt.set(false); LeftRet.set(false) }
         }
     }
 
-    override fun setB(state: PneumaticsIO.State) {
-        bState = state
+    override fun Right(state: PneumaticsIO.State) {
+        RightState = state
         when (state) {
-            PneumaticsIO.State.EXTEND -> { bRet.set(false); bExt.set(true) }
-            PneumaticsIO.State.RETRACT -> { bExt.set(false); bRet.set(true) }
-            PneumaticsIO.State.NEUTRAL -> { bExt.set(false); bRet.set(false) }
+            PneumaticsIO.State.EXTEND -> { RightRet.set(false); RightExt.set(true) }
+            PneumaticsIO.State.RETRACT -> { RightExt.set(false); RightRet.set(true) }
+            PneumaticsIO.State.NEUTRAL -> { RightExt.set(false); RightRet.set(false) }
+        }
+    }
+
+    override fun setCompressor(enabled: Boolean) {
+        if (enabled) {
+            pcm.enableCompressorDigital()
+        } else {
+            pcm.disableCompressor()
         }
     }
 
     override fun updateInputs(inputs: PneumaticsIO.Inputs) {
-        inputs.aState = aState
-        inputs.bState = bState
-        inputs.aExtendOn = aExt.get()
-        inputs.aRetractOn = aRet.get()
-        inputs.bExtendOn = bExt.get()
-        inputs.bRetractOn = bRet.get()
+        inputs.Left = LeftState
+        inputs.Right = RightState
+
+        inputs.CompressorEnabled = pcm.compressor
+
+        val aIsExtending = LeftExt.get()
+        inputs.Left_Solenoid_Extend = aIsExtending
+        inputs.Left_Solenoid_Retract = !aIsExtending
+
+        val bIsExtending = RightExt.get()
+        inputs.Right_Solenoid_Extend = bIsExtending
+        inputs.Right_Solenoid_Retract = !bIsExtending
     }
 }
