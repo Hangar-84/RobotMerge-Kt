@@ -4,16 +4,19 @@ interface PneumaticsIO {
     enum class State { EXTEND, RETRACT, NEUTRAL }
 
     data class Inputs(
-        var aState: State = State.NEUTRAL,
-        var bState: State = State.NEUTRAL,
-        var aExtendOn: Boolean = false,
-        var aRetractOn: Boolean = false,
-        var bExtendOn: Boolean = false,
-        var bRetractOn: Boolean = false,
+        var Left: State = State.NEUTRAL,
+        var Right: State = State.NEUTRAL,
+        var CompressorEnabled: Boolean = false,
+        var Left_Solenoid_Extend: Boolean = false,
+        var Left_Solenoid_Retract: Boolean = false,
+        var Right_Solenoid_Extend: Boolean = false,
+        var Right_Solenoid_Retract: Boolean = false,
     )
 
     fun updateInputs(inputs: Inputs)
 
-    fun setA(state: State)
-    fun setB(state: State)
+    fun Left(state: State)
+    fun Right(state: State)
+
+    fun setCompressor(enabled: Boolean)
 }
