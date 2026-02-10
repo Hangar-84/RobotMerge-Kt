@@ -11,6 +11,8 @@ interface LauncherIO {
     )
 
     fun updateInputs(inputs: Inputs) {}
+    fun setLeftPercent(percent: Double) {}
+    fun setRightPercent(percent: Double) {}
     fun setPercent(percent: Double) {}
     fun stop() = setPercent(0.0)
     fun simulationPeriodic(dtSeconds: Double) {}

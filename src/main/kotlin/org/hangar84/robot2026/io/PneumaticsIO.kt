@@ -1,7 +1,10 @@
 package org.hangar84.robot2026.io
 
 interface PneumaticsIO {
-    enum class State { EXTEND, RETRACT, NEUTRAL }
+    enum class State { EXTEND, //Forward
+         RETRACT, //Reverse
+        NEUTRAL  // Off
+        }
 
     data class Inputs(
         var Left: State = State.NEUTRAL,

@@ -1,48 +1,36 @@
 package org.hangar84.robot2026
 
-import CtreTwoValvePnematicsIO
 import com.pathplanner.lib.auto.NamedCommands
 import edu.wpi.first.math.MathUtil
 import edu.wpi.first.math.filter.SlewRateLimiter
 import edu.wpi.first.math.geometry.Rotation2d
-import edu.wpi.first.math.proto.System
-import edu.wpi.first.networktables.NetworkTableInstance
-import edu.wpi.first.wpilibj.DigitalInput
-import edu.wpi.first.wpilibj.DriverStation
-import edu.wpi.first.wpilibj.RobotBase
-import edu.wpi.first.wpilibj.RobotController
-import edu.wpi.first.wpilibj.Timer
+import edu.wpi.first.wpilibj.*
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard
 import edu.wpi.first.wpilibj2.command.Command
 import edu.wpi.first.wpilibj2.command.Commands
 import edu.wpi.first.wpilibj2.command.InstantCommand
-import edu.wpi.first.wpilibj2.command.WaitCommand
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController
 import org.hangar84.robot2026.commands.driveCommand
 import org.hangar84.robot2026.constants.Constants
 import org.hangar84.robot2026.constants.RobotType
 import org.hangar84.robot2026.io.GyroIO
-import org.hangar84.robot2026.io.IntakeIO
 import org.hangar84.robot2026.io.MecanumIO
 import org.hangar84.robot2026.io.PneumaticsIO
 import org.hangar84.robot2026.io.SwerveIO
 import org.hangar84.robot2026.io.real.*
-import org.hangar84.robot2026.io.real.RevIntakeIO
-import org.hangar84.robot2026.io.sim.SimGyroIO
-import org.hangar84.robot2026.io.sim.SimIntakeIO
-import org.hangar84.robot2026.io.sim.SimLauncherIO
-import org.hangar84.robot2026.io.sim.SimMecanumIO
-import org.hangar84.robot2026.io.sim.SimPneumaticsIO
-import org.hangar84.robot2026.io.sim.SimSwerveIO
-import org.hangar84.robot2026.sim.*
+import org.hangar84.robot2026.io.sim.*
 import org.hangar84.robot2026.sim.SimClock.dtSeconds
+import org.hangar84.robot2026.sim.SimField
 import org.hangar84.robot2026.sim.SimField.publishOnce
 import org.hangar84.robot2026.sim.SimField.setRobotPose
+import org.hangar84.robot2026.sim.SimHooks
+import org.hangar84.robot2026.sim.SimSensors
+import org.hangar84.robot2026.sim.SimState
 import org.hangar84.robot2026.sim.SimState.isSim
 import org.hangar84.robot2026.subsystems.*
 import org.hangar84.robot2026.telemetry.TelemetryRouter
-import sun.java2d.cmm.ColorTransform.Simulation
+import kotlin.math.hypot
 import kotlin.math.withSign
 
 object RobotContainer {
@@ -53,18 +41,21 @@ object RobotContainer {
     val launcher = LauncherSubsystem(
         if (RobotBase.isSimulation()) SimLauncherIO() else RevLauncherIO()
     )
+    val hinge = HingeSubsystem(
+        if (isSim) SimHingeIO() else RevHingeIO()
+    )
     val Intake = IntakeSubsystem(
         if (RobotBase.isSimulation()) SimIntakeIO() else RevIntakeIO()
     )
 
     val pneumaticsIO: PneumaticsIO =
         if (isSim) SimPneumaticsIO()
-        else CtreTwoValvePnematicsIO(
-            pcmCanId = Constants.Pneumatics.PCM_CAN_ID,
-            aExtend = Constants.Pneumatics.A_EXTEND_CHANNEL,
-            aRetract = Constants.Pneumatics.A_RETRACT_CHANNEL,
-            bExtend = Constants.Pneumatics.B_EXTEND_CHANNEL,
-            bRetract = Constants.Pneumatics.B_RETRACT_CHANNEL,
+        else CtreTwoValvePneumaticsIO(
+            Constants.Pneumatics.REVPH_CAN_ID,
+            Constants.Pneumatics.A_EXTEND_CHANNEL,
+            Constants.Pneumatics.A_RETRACT_CHANNEL,
+            Constants.Pneumatics.B_EXTEND_CHANNEL,
+            Constants.Pneumatics.B_RETRACT_CHANNEL,
         )
 
     val pneumatics = PneumaticsSubsystem(pneumaticsIO)
@@ -74,7 +65,7 @@ object RobotContainer {
             "OctupleLaunch",
             Commands.sequence(
                 launcher.pulseCommand(.25),
-                Commands.waitSeconds(.4), // Laundh 1st ball.
+                Commands.waitSeconds(.4), // Launch 1st ball.
                 launcher.pulseCommand(.25),
                 Commands.waitSeconds(.4), // Launch 2nd ball.
                 launcher.pulseCommand(.25),
@@ -128,7 +119,12 @@ object RobotContainer {
             MecanumDriveSubsystem(mecanum, gyro)
         }
     }
-    // The driver's controller
+
+    val speeds = drivetrain.getChassisSpeeds() // Ensure your Drivetrain interface has this
+    val totalLinearSpeed = hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond)
+    val System_Voltage = RobotController.getBatteryVoltage()
+    val RSL_Light = RobotController.getRSLState()
+    val Comms_Disable = RobotController.getCommsDisableCount()
 
     private var autoChooser: SendableChooser<Command>? = null
 
@@ -200,9 +196,10 @@ object RobotContainer {
                 { true }
             )
             (drivetrain as? SwerveDriveSubsystem)?.let { swerve ->
-                controller.leftBumper().whileTrue(swerve.PARK_COMMAND)
+                controller.a().whileTrue(swerve.PARK_COMMAND)
             }
         }
+
 
         controller.leftTrigger(0.1).whileTrue(Intake.INTAKE_COMMAND)
         controller.rightTrigger(0.1).whileTrue(launcher.LAUNCH_COMMAND)
@@ -230,22 +227,24 @@ object RobotContainer {
             Commands.runOnce({ pneumatics.setSystemEnabled(true) }, pneumatics)
         )
 
-        controller.a().onTrue(Commands.runOnce({ pneumatics.smartToggle() }, pneumatics))
-        controller.x().onTrue(Commands.runOnce({ pneumatics.smartExtend() }, pneumatics))
-        controller.b().onTrue(Commands.runOnce({ pneumatics.smartRetract() }, pneumatics))
+        controller.rightBumper().onTrue(Commands.runOnce({ pneumatics.smartExtend() }, pneumatics))
+        controller.leftBumper().onTrue(Commands.runOnce({ pneumatics.smartRetract() }, pneumatics))
 
-        controller.y().onTrue(
+        controller.x().onTrue(
             Commands.runOnce({
                 pneumatics.cycleSelection()
-                controller.getHID().setRumble(edu.wpi.first.wpilibj.GenericHID.RumbleType.kBothRumble, 0.5)
+                controller.hid.setRumble(GenericHID.RumbleType.kBothRumble, 0.5)
             }, pneumatics)
                 .andThen(Commands.waitSeconds(0.2))
-                .finallyDo { _ -> controller.getHID().setRumble(edu.wpi.first.wpilibj.GenericHID.RumbleType.kBothRumble, 0.0) }
+                .finallyDo { _ -> controller.hid.setRumble(GenericHID.RumbleType.kBothRumble, 0.0) }
         )
         Commands.runOnce({
             pneumatics.setSystemEnabled(false)
             pneumatics.retractBoth() // Extra safety: retract when disabling
         }, pneumatics).ignoringDisable(true)
+
+        controller.b().whileTrue(hinge.manualUpCommand())
+        controller.y().whileTrue(hinge.manualDownCommmand())
     }
 
     // -- Simulation --
@@ -260,13 +259,6 @@ object RobotContainer {
         setRobotPose(pose)
         publishGyroWidgets()
 
-        val speeds = drivetrain.getChassisSpeeds() // Ensure your Drivetrain interface has this
-        val totalLinearSpeed = Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond)
-        val System_Voltage = RobotController.getBatteryVoltage()
-        val RSL_Light = RobotController.getRSLState()
-        val CPU_Temp = RobotController.getCPUTemp()
-        val Comms_Disable = RobotController.getCommsDisableCount()
-
         val RobotState = edu.wpi.first.networktables.NetworkTableInstance.getDefault()
             .getTable("RobotState")
 
@@ -279,8 +271,7 @@ object RobotContainer {
 
         System_Status.getEntry("System Voltage").setDouble(System_Voltage)
         System_Status.getEntry("RSL_Light").setBoolean(RSL_Light)
-        System_Status.getEntry("CPU_Temp").setDouble(CPU_Temp)
-        System_Status.getEntry("Comms_Disable").setNumber(Comms_Disable)
+        System_Status.getEntry("Comms_Disable").setBoolean(Comms_Disable == RobotController.getCommsDisableCount() )
 
         if (isSim) {
             val truth = SimState.groundTruthPose
