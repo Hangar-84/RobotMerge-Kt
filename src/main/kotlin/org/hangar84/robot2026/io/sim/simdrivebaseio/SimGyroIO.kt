@@ -1,8 +1,7 @@
-package org.hangar84.robot2026.io.sim
+package org.hangar84.robot2026.io.sim.simdrivebaseio
 
 import edu.wpi.first.math.geometry.Rotation2d
-import org.hangar84.robot2026.io.GyroIO
-import org.hangar84.robot2026.sim.SimSensors
+import org.hangar84.robot2026.io.interfaces.drivebaseio.GyroIO
 
 class SimGyroIO : GyroIO {
     private var yaw = Rotation2d()

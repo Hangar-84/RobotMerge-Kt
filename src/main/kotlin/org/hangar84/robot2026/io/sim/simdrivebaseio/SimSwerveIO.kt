@@ -1,8 +1,8 @@
-package org.hangar84.robot2026.io.sim
+package org.hangar84.robot2026.io.sim.simdrivebaseio
 
 import edu.wpi.first.math.geometry.Rotation2d
 import edu.wpi.first.math.kinematics.SwerveModuleState
-import org.hangar84.robot2026.io.SwerveIO
+import org.hangar84.robot2026.io.interfaces.drivebaseio.SwerveIO
 import kotlin.math.PI
 import kotlin.math.abs
 
