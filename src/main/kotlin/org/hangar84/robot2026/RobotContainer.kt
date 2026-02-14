@@ -1,5 +1,6 @@
 package org.hangar84.robot2026
 
+import com.lumynlabs.connection.usb.USBPort
 import com.pathplanner.lib.auto.NamedCommands
 import edu.wpi.first.math.MathUtil
 import edu.wpi.first.math.filter.SlewRateLimiter
@@ -15,6 +16,7 @@ import org.hangar84.robot2026.commands.driveCommand
 import org.hangar84.robot2026.constants.ConfigLoader
 import org.hangar84.robot2026.constants.RobotType
 import org.hangar84.robot2026.io.GyroIO
+import org.hangar84.robot2026.io.LedIO
 import org.hangar84.robot2026.io.MecanumIO
 import org.hangar84.robot2026.io.PneumaticsIO
 import org.hangar84.robot2026.io.SwerveIO
@@ -72,6 +74,11 @@ object RobotContainer {
         else CtreTwoValvePneumaticsIO(
             sharedCfg.pneumatics
         )
+
+    val ledIO: LedIO =
+        LedIOLumynUsb(USBPort.kUSB1, "all")
+
+    val leds = LedSubsystem(ledIO).apply { connect() }
 
     val pneumatics = PneumaticsSubsystem(pneumaticsIO)
 
@@ -200,8 +207,22 @@ object RobotContainer {
         }
 
 
-        controller.leftTrigger(0.1).whileTrue(Intake.INTAKE_COMMAND)
-        controller.rightTrigger(0.1).whileTrue(launcher.LAUNCH_COMMAND)
+        controller.leftTrigger(0.1).whileTrue(Intake.INTAKE_COMMAND.alongWith(
+            Commands.startEnd(
+                { leds.setMode(LedSubsystem.Mode.INTAKE)},
+                {leds.setMode(LedSubsystem.Mode.DEFAULT)},
+                leds
+            )
+        )
+        )
+        controller.rightTrigger(0.1).whileTrue(launcher.LAUNCH_COMMAND.alongWith(
+            Commands.startEnd(
+                {leds.setMode(LedSubsystem.Mode.LAUNCH)},
+                {leds.setMode(LedSubsystem.Mode.DEFAULT)},
+                leds
+            )
+        )
+        )
 
         // Selection Buttons
         SmartDashboard.putData("Pneumatics/Select Left",
