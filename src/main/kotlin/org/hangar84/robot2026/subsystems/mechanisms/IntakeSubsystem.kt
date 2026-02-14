@@ -1,4 +1,4 @@
-package org.hangar84.robot2026.subsystems
+package org.hangar84.robot2026.subsystems.mechanisms
 
 import edu.wpi.first.wpilibj.RobotBase
 import edu.wpi.first.wpilibj.smartdashboard.Mechanism2d
@@ -8,7 +8,7 @@ import edu.wpi.first.wpilibj.util.Color8Bit
 import edu.wpi.first.wpilibj2.command.Commands
 import edu.wpi.first.wpilibj2.command.SubsystemBase
 import edu.wpi.first.wpilibj2.command.button.Trigger
-import org.hangar84.robot2026.io.IntakeIO
+import org.hangar84.robot2026.io.interfaces.mechanismio.IntakeIO
 import org.hangar84.robot2026.telemetry.TelemetryRouter.Intake
 
 class IntakeSubsystem(val io: IntakeIO) : SubsystemBase() {

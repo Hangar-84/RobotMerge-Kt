@@ -1,9 +1,9 @@
-package org.hangar84.robot2026.subsystems
+package org.hangar84.robot2026.subsystems.mechanisms
 
 import edu.wpi.first.wpilibj2.command.Command
 import edu.wpi.first.wpilibj2.command.Commands
 import edu.wpi.first.wpilibj2.command.SubsystemBase
-import org.hangar84.robot2026.io.HingeIO
+import org.hangar84.robot2026.io.interfaces.mechanismio.HingeIO
 
 class HingeSubsystem(private val io: HingeIO): SubsystemBase() {
     private val inputs = HingeIO.Inputs()
