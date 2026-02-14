@@ -1,4 +1,4 @@
-package org.hangar84.robot2026.subsystems
+package org.hangar84.robot2026.subsystems.drivebases
 
 import com.pathplanner.lib.auto.AutoBuilder
 import com.pathplanner.lib.config.PIDConstants
@@ -19,18 +19,21 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser
 import edu.wpi.first.wpilibj2.command.Command
 import edu.wpi.first.wpilibj2.command.Commands
 import org.hangar84.robot2026.RobotContainer.robotType
-import org.hangar84.robot2026.io.GyroIO
-import org.hangar84.robot2026.io.MecanumIO
+import org.hangar84.robot2026.io.interfaces.drivebaseio.GyroIO
+import org.hangar84.robot2026.io.interfaces.drivebaseio.MecanumIO
+import org.hangar84.robot2026.io.interfaces.ledio.LedTarget
+import org.hangar84.robot2026.subsystems.leds.LedSubsystem
 import org.hangar84.robot2026.telemetry.TelemetryRouter
 import kotlin.jvm.optionals.getOrNull
-import org.hangar84.robot2026.io.GyroIO.Inputs as gyroInputs
-import org.hangar84.robot2026.io.MecanumIO.Inputs as mecanumInputs
+import kotlin.math.abs
+import org.hangar84.robot2026.io.interfaces.drivebaseio.GyroIO.Inputs as gyroInputs
+import org.hangar84.robot2026.io.interfaces.drivebaseio.MecanumIO.Inputs as mecanumInputs
 
 
 class MecanumDriveSubsystem(
     private val mecanumIO: MecanumIO,
-    private val gyroIO: GyroIO
-
+    private val gyroIO: GyroIO,
+    private val leds: LedSubsystem
 ) :  Drivetrain() {
 
     // Aren't used but needed so that Drivetrain requirement is met
@@ -51,6 +54,12 @@ class MecanumDriveSubsystem(
 
     private val gyroInputs = gyroInputs()
     private val mecanumInputs = mecanumInputs()
+
+    private val anyMotorFaulted =
+                mecanumInputs.flDriveFaulted ||
+                mecanumInputs.frDriveFaulted ||
+                mecanumInputs.rlDriveFaulted ||
+                mecanumInputs.rrDriveFaulted
 
     override fun getHeading(): Rotation2d = gyroInputs.yaw
 
@@ -180,14 +189,16 @@ class MecanumDriveSubsystem(
         poseEstimator.update(getHeading(), positions)
 
         publishMecanumTelemetry(positions)
+
+        leds.setFault(LedSubsystem.Fault.DRIVE_MOTOR_FAIL, anyMotorFaulted)
     }
 
     private fun normalizeMecanum(w: MecanumDriveWheelSpeeds, max: Double): MecanumDriveWheelSpeeds {
         val maxMag = listOf(
-            kotlin.math.abs(w.frontLeftMetersPerSecond),
-            kotlin.math.abs(w.frontRightMetersPerSecond),
-            kotlin.math.abs(w.rearLeftMetersPerSecond),
-            kotlin.math.abs(w.rearRightMetersPerSecond)
+            abs(w.frontLeftMetersPerSecond),
+            abs(w.frontRightMetersPerSecond),
+            abs(w.rearLeftMetersPerSecond),
+            abs(w.rearRightMetersPerSecond)
         ).maxOrNull() ?: 0.0
 
         if (maxMag <= max || maxMag < 1e-9) return w

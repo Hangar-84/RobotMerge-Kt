@@ -1,9 +1,9 @@
-package org.hangar84.robot2026.io.real
+package org.hangar84.robot2026.io.real.drivebaserealio
 
 import edu.wpi.first.math.geometry.Rotation2d
 import edu.wpi.first.wpilibj.ADIS16470_IMU
 import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis
-import org.hangar84.robot2026.io.GyroIO
+import org.hangar84.robot2026.io.interfaces.drivebaseio.GyroIO
 
 class AdisGyroIO: GyroIO {
     private val imu = ADIS16470_IMU()
