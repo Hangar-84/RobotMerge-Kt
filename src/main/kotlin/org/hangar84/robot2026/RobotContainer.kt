@@ -95,7 +95,7 @@ object RobotContainer {
     val ledIO: LedIO =
         LedIOLumynUsb(USBPort.kUSB1, "all")
 
-    val leds = LedSubsystem(ledIO, robotType).apply { connect() }
+    val leds = LedSubsystem(ledIO).apply { connect() }
 
     val pneumatics = PneumaticsSubsystem(pneumaticsIO)
 
