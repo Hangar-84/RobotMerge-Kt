@@ -1,11 +1,10 @@
 package org.hangar84.robot2026.io.real.drivebaserealio
 
-import com.revrobotics.spark.SparkBase
 import com.revrobotics.spark.config.SparkMaxConfig
 import org.hangar84.robot2026.constants.MaxConfig
 import org.hangar84.robot2026.io.interfaces.drivebaseio.MecanumIO
-import org.hangar84.robot2026.mecanum.MecanumConfigs.driveConfig
-import org.hangar84.robot2026.mecanum.MecanumModule
+import org.hangar84.robot2026.subsystems.drivebases.mecanum.`mecanum-configs`.MecanumConfigs.driveConfig
+import org.hangar84.robot2026.subsystems.drivebases.mecanum.`mecanum-configs`.MecanumModule
 import org.hangar84.robot2026.constants.Mecanum
 
 class RevMecanumIO(cfg: Mecanum?, maxcfg: MaxConfig) : MecanumIO {

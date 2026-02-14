@@ -29,10 +29,4 @@ object SimState {
     var simFRVel = 0.0
     var simRLVel = 0.0
     var simRRVel = 0.0
-
-    // Optional: swerve azimuth angles (deg) if you want to show them
-    var simFLAngleDeg = 0.0
-    var simFRAngleDeg = 0.0
-    var simRLAngleDeg = 0.0
-    var simRRAngleDeg = 0.0
 }
