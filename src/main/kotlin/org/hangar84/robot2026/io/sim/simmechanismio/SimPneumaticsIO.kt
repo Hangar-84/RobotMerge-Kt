@@ -1,6 +1,6 @@
-package org.hangar84.robot2026.io.sim
+package org.hangar84.robot2026.io.sim.simmechanismio
 
-import org.hangar84.robot2026.io.PneumaticsIO
+import org.hangar84.robot2026.io.interfaces.mechanismio.PneumaticsIO
 
 class SimPneumaticsIO : PneumaticsIO {
 

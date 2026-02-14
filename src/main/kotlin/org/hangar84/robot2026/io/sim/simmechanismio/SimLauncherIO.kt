@@ -1,10 +1,10 @@
-package org.hangar84.robot2026.io.sim
+package org.hangar84.robot2026.io.sim.simmechanismio
 
 import edu.wpi.first.math.MathUtil
 import edu.wpi.first.math.system.plant.DCMotor
 import edu.wpi.first.math.system.plant.LinearSystemId
 import edu.wpi.first.wpilibj.simulation.FlywheelSim
-import org.hangar84.robot2026.io.LauncherIO
+import org.hangar84.robot2026.io.interfaces.mechanismio.LauncherIO
 
 class SimLauncherIO : LauncherIO {
     private val launcherGearbox = DCMotor.getCIM(1)

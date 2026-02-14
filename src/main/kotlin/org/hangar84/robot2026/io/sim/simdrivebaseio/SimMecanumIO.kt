@@ -1,6 +1,6 @@
-package org.hangar84.robot2026.io.sim
+package org.hangar84.robot2026.io.sim.simdrivebaseio
 
-import org.hangar84.robot2026.io.MecanumIO
+import org.hangar84.robot2026.io.interfaces.drivebaseio.MecanumIO
 import org.hangar84.robot2026.sim.SimState
 import kotlin.math.abs
 
