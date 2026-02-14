@@ -1,13 +1,15 @@
-package org.hangar84.robot2026.subsystems
+package org.hangar84.robot2026.subsystems.leds
 
-import edu.wpi.first.wpilibj2.command.SubsystemBase
-import org.hangar84.robot2026.io.LedIO
 import edu.wpi.first.wpilibj.DriverStation
 import edu.wpi.first.wpilibj.RobotController
 import edu.wpi.first.wpilibj.util.Color
+import edu.wpi.first.wpilibj2.command.SubsystemBase
+import org.hangar84.robot2026.constants.RobotType
+import org.hangar84.robot2026.io.interfaces.ledio.LedIO
+import org.hangar84.robot2026.io.interfaces.ledio.LedTarget
 import java.util.EnumSet
 
-class LedSubsystem(private val io: LedIO): SubsystemBase() {
+class LedSubsystem(private val io: LedIO, private val robotType: RobotType): SubsystemBase() {
     enum class Mode { DISABLED, DEFAULT, INTAKE, LAUNCH }
 
     enum class Fault {
@@ -18,6 +20,7 @@ class LedSubsystem(private val io: LedIO): SubsystemBase() {
 
         // Subsystem faults (add as many as you prefer)
         DRIVE_MOTOR_FAIL,
+        TURNING_MOTOR_FAIL, //Swerve specific
         INTAKE_MOTOR_FAIL,
         LAUNCHER_MOTOR_FAIL,
         HINGE_MOTOR_FAIL
@@ -45,32 +48,33 @@ class LedSubsystem(private val io: LedIO): SubsystemBase() {
     private fun applyPriority() {
         when {
             faults.contains(Fault.RIO_BROWNOUT) -> {
-                io.setStrobe(Color(1.0, 0.0, 0.0), 70) // red fast strobe
+                io.setStrobe(LedTarget.BASE, Color(1.0, 0.0, 0.0), 70) // red fast strobe
                 return
             }
             faults.contains(Fault.DS_DISCONNECTED) -> {
-                io.setChase(Color(0.7, 0.0, 1.0), 70) // purple chase
+                io.setChase(LedTarget.BASE, Color(0.7, 0.0, 1.0), 70) // purple chase
                 return
             }
             faults.contains(Fault.LOW_BATTERY) -> {
-                io.setBreathe(Color(1.0, 0.4, 0.0), 90) //orange breathe
+                io.setBreathe(LedTarget.BASE, Color(1.0, 0.4, 0.0), 90) //orange breathe
             }
         }
 
         when (firstSubsystemFault()) {
-            Fault.DRIVE_MOTOR_FAIL -> {io.setStrobe(Color(1.0, 1.0, 0.0), 120); return} // yellow strobe
-            Fault.INTAKE_MOTOR_FAIL -> {io.setStrobe(Color(0.0, 1.0, 0.5), 120); return} // aquamarine strobe
-            Fault.LAUNCHER_MOTOR_FAIL -> {io.setStrobe(Color(0.0, 0.7, 1.0), 120); return} // cyan strobe
-            Fault.HINGE_MOTOR_FAIL -> {io.setStrobe(Color(1.0, 0.0, 1.0), 120); return} // magenta strobe
+            Fault.DRIVE_MOTOR_FAIL -> {io.setStrobe(LedTarget.BASE, Color(1.0, 1.0, 0.0), 120); return} // yellow strobe
+            Fault.TURNING_MOTOR_FAIL -> {io.setStrobe(LedTarget.BASE, Color(1.0, 0.75, 0.79), 120); return} // pink strobe
+            Fault.INTAKE_MOTOR_FAIL -> {io.setStrobe(LedTarget.BASE, Color(0.0, 1.0, 0.5), 120); return} // aquamarine strobe
+            Fault.LAUNCHER_MOTOR_FAIL -> {io.setStrobe(LedTarget.BASE, Color(0.0, 0.7, 1.0), 120); return} // cyan strobe
+            Fault.HINGE_MOTOR_FAIL -> {io.setStrobe(LedTarget.BASE, Color(1.0, 0.0, 1.0), 120); return} // magenta strobe
             null -> {}
             else -> {}
         }
 
         when (mode) {
-            Mode.LAUNCH -> io.setStrobe(Color(1.0, 1.0, 1.0), 55)
-            Mode.INTAKE -> io.setStrobe(Color(0.0, 1.0, 0.0), 35)
-            Mode.DISABLED -> io.setBreathe(teamDim(), 90)
-            Mode.DEFAULT -> io.setSolid(teamDim())
+            Mode.LAUNCH -> io.setStrobe(LedTarget.LAUNCHER, Color(1.0, 1.0, 1.0), 55)
+            Mode.INTAKE -> io.setStrobe(LedTarget.INTAKE, Color(0.0, 1.0, 0.0), 35)
+            Mode.DISABLED -> io.setBreathe(LedTarget.BASE, teamDim(), 90)
+            Mode.DEFAULT -> io.setSolid(LedTarget.BASE, teamDim())
         }
     }
 
