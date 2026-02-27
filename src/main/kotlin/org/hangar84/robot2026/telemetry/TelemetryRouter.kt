@@ -2,15 +2,59 @@ package org.hangar84.robot2026.telemetry
 
 import edu.wpi.first.math.geometry.Pose2d
 import edu.wpi.first.math.geometry.Rotation2d
+import edu.wpi.first.networktables.GenericEntry
+import edu.wpi.first.networktables.NetworkTable
+import edu.wpi.first.networktables.NetworkTableInstance
 import edu.wpi.first.wpilibj.RobotBase
 import edu.wpi.first.wpilibj.Timer
-import org.hangar84.robot2026.RobotContainer.robotType
+import org.hangar84.robot2026.io.interfaces.drivebaseio.SwerveIO
 
 object TelemetryRouter {
     private val isSim = RobotBase.isSimulation()
     private val lastPublishTime = mutableMapOf<String, Double>()
 
-    private var base = robotType.name
+    private var base = ""
+
+
+    private val nt = NetworkTableInstance.getDefault()
+
+    private val launcherTable: NetworkTable =
+        nt.getTable("Mechanism/Launcher")
+    private val pneumaticsTable: NetworkTable = nt.getTable("Mechanism/Pneumatics")
+
+    private val intakeTable: NetworkTable = nt.getTable("Mechanism/Intake")
+
+    private val swerveTable = NetworkTableInstance.getDefault().getTable("SwerveDrive")
+
+    private val powerTable = swerveTable.getSubTable("Power")
+
+    object SwerveDrive {
+        fun power(
+            currentsName: String,
+            voltsName: String,
+            i: Int,
+        ){
+            val inputs = arrayOf(SwerveIO.Inputs().fl, SwerveIO.Inputs().fr, SwerveIO.Inputs().rl, SwerveIO.Inputs().rr)
+            powerTable.getEntry(currentsName).setDouble(inputs[i].driveCurrentAmps)
+            powerTable.getEntry(voltsName).setDouble(inputs[i].driveAppliedVolts)
+        }
+        fun data(
+            angleName: String,
+            speedName: String,
+            angle: Double,
+            speedMPS: Double
+        ){
+            val dataTable = swerveTable.getSubTable("ModuleData")
+            dataTable.getEntry(angleName).setDouble(angle)
+            dataTable.getEntry(speedName).setDouble(speedMPS)
+        }
+
+        fun moduleStates(
+            measuredData: DoubleArray
+        ){
+            swerveTable.getEntry("ModuleStates").setDoubleArray(measuredData)
+        }
+    }
 
     private fun shouldPublish(group: String): Boolean {
         if (!TelemetryConfig.enabled(group, true)) return false
@@ -29,8 +73,8 @@ object TelemetryRouter {
         return false
     }
 
-    fun setBase(name: String) {
-        base = name
+    fun setBase(robotType: String) {
+        base = robotType
     }
 
     private fun publish(key: String, value: Double) {
@@ -158,75 +202,96 @@ object TelemetryRouter {
         }
     }
 
-    fun angleDeg(fl: Double, fr: Double, rl: Double, rr: Double) {
-        if (isSim) {
-            if (!shouldPublish("motors")) return
-
-            publish("$base/AngleDeg/FL", fl)
-            publish("$base/AngleDeg/FR", fr)
-            publish("$base/AngleDeg/RL", rl)
-            publish("$base/AngleDeg/RR", rr)
-
-
-            SimTelemetry.angleDeg(
-                TelemetryConfig.prefix("motors", "Motors"),
-                fl, fr, rl, rr
-            )
-        } else return
-    }
-
-    fun launcher(
-        leftAppliedOutput: Double, rightAppliedOutput: Double,
-        leftVelocityRpm: Double, rightVelocityRpm: Double,
-        leftCurrentAmps: Double, rightCurrentAmps: Double) {
+    object Launcher{
+        fun launcher(
+            leftAppliedOutput: Double,
+            rightAppliedOutput: Double,
+            leftCurrentAmps: Double,
+            rightCurrentAmps: Double,
+            leftTempCelsius: Double,
+            rightTempCelsius: Double,
+            launcherState: Boolean,
+            launcherSwitch: Boolean
+        ) {
             if (!shouldPublish("launcher")) return
 
-            publish("$base/LeftOutput", leftAppliedOutput)
-            publish("$base/RightOutput", rightAppliedOutput)
-            publish("$base/LeftRPM", leftVelocityRpm)
-            publish("$base/RightRPM", rightVelocityRpm)
-            publish("$base/LeftCurrent", leftCurrentAmps)
-            publish("$base/RightCurrent", rightCurrentAmps)
+            val table = NetworkTableInstance.getDefault()
+                .getTable("Mechanism/Launcher")
 
-        if (isSim) {
-            SimTelemetry.launcher(
-                TelemetryConfig.prefix("launcher", "Launchers"),
-                leftAppliedOutput, rightAppliedOutput,
-                leftVelocityRpm, rightVelocityRpm,
-                leftCurrentAmps, rightCurrentAmps
-            )
+            table.getEntry("LeftAppliedVoltage").setDouble(leftAppliedOutput * 12.0)
+            table.getEntry("RightAppliedVoltage").setDouble(rightAppliedOutput * 12.0)
+            table.getEntry("LeftCurrentAmps").setDouble(leftCurrentAmps)
+            table.getEntry("RightCurrentAmps").setDouble(rightCurrentAmps)
+            table.getEntry("LeftTempCelsius").setDouble(leftTempCelsius)
+            table.getEntry("RightTempCelsius").setDouble(rightTempCelsius)
+
+            table.getEntry("Launcher State").setBoolean(launcherState)
+            table.getEntry("Launcher Switch").setBoolean(launcherSwitch)
+        }
+        fun launcherSwitch(default: Boolean = false): Boolean =
+            launcherTable.getEntry("Launcher Switch").getBoolean(default)
+    }
+
+    object Intake{
+        val Intake_Switch: GenericEntry = intakeTable.getTopic("Intake Switch").getGenericEntry()
+        val Intake_State: GenericEntry = intakeTable.getTopic("Intake State").getGenericEntry()
+        fun intake(
+            leftAppliedOutput: Double,
+            leftCurrentAmps: Double,
+            leftTempCelsius: Double,
+        ) {
+            if (!shouldPublish("Intake")) return
+
+            val table = NetworkTableInstance.getDefault()
+                .getTable("Mechanism/Intake")
+
+            table.getEntry("LeftAppliedVoltage").setDouble(leftAppliedOutput * 12.0)
+            table.getEntry("LeftCurrentAmps").setDouble(leftCurrentAmps)
+            table.getEntry("LeftTempCelsius").setDouble(leftTempCelsius)
         }
     }
 
-    fun pneumatics(
-        compressorEnabled: Boolean,
-        extendSolenoidOn: Boolean,
-        retractSolenoidOn: Boolean,
-        state: String,
-        pressurePsi: Double? = null
-    ) {
+    object Pneumatics{
 
-        if (!shouldPublish("pneumatics")) return
-        val prefix = TelemetryConfig.prefix("pneumatics", "Pneumatics")
+        val Extend_Left: GenericEntry =
+            pneumaticsTable.getTopic("Extend Left").getGenericEntry()
 
-        TelemetrySinks.publishBoolean("$base/CompressorEnabled", compressorEnabled)
-        TelemetrySinks.publishBoolean("$base/ExtendSolenoidOn", extendSolenoidOn)
-        TelemetrySinks.publishBoolean("$base/RetractSolenoidOn", retractSolenoidOn)
-        TelemetrySinks.publishString("$base/State", state)
+        val Extend_Right: GenericEntry =
+            pneumaticsTable.getTopic("Extend Right").getGenericEntry()
 
-        if (isSim) {
+        val Extend_Both: GenericEntry =
+            pneumaticsTable.getTopic("Extend Both").getGenericEntry()
 
-            SimTelemetry.pneumatics(
-                prefix,
-                compressorEnabled, state,
-                extendSolenoidOn, retractSolenoidOn, pressurePsi
-            )
-        } else {
+        val setCompressor: GenericEntry =
+            pneumaticsTable.getTopic("Toggle Compressor").getGenericEntry()
+        fun pneumatics(
+            CompressorEnabled: Boolean,
+            Left_Solenoid_Extend: Boolean,
+            Left_Solenoid_Retract: Boolean,
+            Right_Solenoid_Extend: Boolean,
+            Right_Solenoid_Retract: Boolean,
+            Is_Left_Selected: Boolean,
+            Is_Right_Selected: Boolean,
+            Is_Both_Selected: Boolean,
+            Selection: String,
+            System_Enabled: Boolean,
+        ) {
+            if (!shouldPublish("Pneumatics")) return
 
-            // optional if you have a pressure sensor later
-            if (pressurePsi != null) {
-                TelemetrySinks.publishNumber("$base/Pneumatics/PressurePsi", pressurePsi)
-            }
+            val Pneumatics_Table = NetworkTableInstance.getDefault()
+                .getTable("Mechanism/Pneumatics")
+
+            Pneumatics_Table.getEntry("Compressor Enabled").setBoolean(CompressorEnabled)
+            Pneumatics_Table.getEntry("Left Solenoid Extend").setBoolean(Left_Solenoid_Extend)
+            Pneumatics_Table.getEntry("Left Solenoid Retract").setBoolean(Left_Solenoid_Retract)
+            Pneumatics_Table.getEntry("Right Solenoid Extend").setBoolean(Right_Solenoid_Extend)
+            Pneumatics_Table.getEntry("Right Solenoid Retract").setBoolean(Right_Solenoid_Retract)
+
+            Pneumatics_Table.getEntry("Selection/Is Left Selected").setBoolean(Is_Left_Selected)
+            Pneumatics_Table.getEntry("Selection/Is Right Selected").setBoolean(Is_Right_Selected)
+            Pneumatics_Table.getEntry("Selection/Is Both Selected").setBoolean(Is_Both_Selected)
+            Pneumatics_Table.getEntry("Selection/Selection").setString(Selection)
+            Pneumatics_Table.getEntry("Selection/System Enabled").setBoolean(System_Enabled)
         }
     }
 

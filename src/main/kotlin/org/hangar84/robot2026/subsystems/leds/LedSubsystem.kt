@@ -1,0 +1,98 @@
+package org.hangar84.robot2026.subsystems.leds
+
+import edu.wpi.first.wpilibj.DriverStation
+import edu.wpi.first.wpilibj.RobotController
+import edu.wpi.first.wpilibj.util.Color
+import edu.wpi.first.wpilibj2.command.SubsystemBase
+import org.hangar84.robot2026.io.interfaces.ledio.LedIO
+import org.hangar84.robot2026.io.interfaces.ledio.LedTarget
+import java.util.EnumSet
+
+class LedSubsystem(private val io: LedIO): SubsystemBase() {
+    enum class Mode { DISABLED, DEFAULT, INTAKE, LAUNCH }
+
+    enum class Fault {
+        // RoboRIO / system
+        RIO_BROWNOUT,
+        DS_DISCONNECTED,
+        LOW_BATTERY,
+
+        // Subsystem faults (add as many as you prefer)
+        DRIVE_MOTOR_FAIL,
+        TURNING_MOTOR_FAIL, //Swerve specific
+        INTAKE_MOTOR_FAIL,
+        LAUNCHER_MOTOR_FAIL,
+        HINGE_MOTOR_FAIL
+    }
+
+    private var mode: Mode = Mode.DEFAULT
+    private val faults: EnumSet<Fault> = EnumSet.noneOf(Fault::class.java)
+
+    fun connect() = io.connect()
+
+    fun setMode(newMode: Mode) {mode = newMode}
+
+    fun setFault(fault: Fault, active: Boolean) {
+        if (active) faults.add(fault) else faults.remove(fault)
+    }
+
+    override fun periodic() {
+        setFault(Fault.RIO_BROWNOUT, RobotController.isBrownedOut())
+        setFault(Fault.DS_DISCONNECTED, !DriverStation.isDSAttached())
+        setFault(Fault.LOW_BATTERY, RobotController.getBatteryVoltage() < 11.2)
+
+        applyPriority()
+    }
+
+    private fun applyPriority() {
+        when {
+            faults.contains(Fault.RIO_BROWNOUT) -> {
+                io.setStrobe(LedTarget.BASE, Color(1.0, 0.0, 0.0), 70) // red fast strobe
+                return
+            }
+            faults.contains(Fault.DS_DISCONNECTED) -> {
+                io.setChase(LedTarget.BASE, Color(0.6156862745, 0.0, 1.0), 70) // purple chase
+                return
+            }
+            faults.contains(Fault.LOW_BATTERY) -> {
+                io.setBreathe(LedTarget.BASE, Color(1.0, 0.6470588235, 0.0), 90) //orange breathe
+            }
+        }
+
+        when (firstSubsystemFault()) {
+            Fault.DRIVE_MOTOR_FAIL -> {io.setStrobe(LedTarget.BASE, Color(1.0, 1.0, 0.0), 120); return} // yellow strobe
+            Fault.TURNING_MOTOR_FAIL -> {io.setStrobe(LedTarget.BASE, Color(1.0, 0.7529411765, 0.7960784314), 120); return} // pink strobe
+            Fault.INTAKE_MOTOR_FAIL -> {io.setStrobe(LedTarget.BASE, Color(0.4980392157, 1.0, 0.831372549), 120); return} // aquamarine strobe
+            Fault.LAUNCHER_MOTOR_FAIL -> {io.setStrobe(LedTarget.BASE, Color(0.0, 1.0, 1.0), 120); return} // cyan strobe
+            Fault.HINGE_MOTOR_FAIL -> {io.setStrobe(LedTarget.BASE, Color(0.5450980392, 0.0, 0.5450980392), 120); return} // dark magenta strobe
+            null -> {}
+            else -> {}
+        }
+
+        when (mode) {
+            Mode.LAUNCH -> io.setStrobe(LedTarget.LAUNCHER, Color(1.0, 1.0, 1.0), 55) // white
+            Mode.INTAKE -> io.setStrobe(LedTarget.INTAKE, Color(0.0, 1.0, 0.0), 35) // green
+            Mode.DISABLED -> io.setBreathe(LedTarget.BASE, teamDim(), 90)
+            Mode.DEFAULT -> io.setSolid(LedTarget.BASE, teamDim())
+        }
+    }
+
+    private fun firstSubsystemFault(): Fault? {
+        val order = listOf(
+            Fault.DRIVE_MOTOR_FAIL,
+            Fault.INTAKE_MOTOR_FAIL,
+            Fault.LAUNCHER_MOTOR_FAIL,
+            Fault.HINGE_MOTOR_FAIL
+        )
+        return order.firstOrNull { faults.contains(it)}
+    }
+
+    private fun teamDim(): Color {
+        val a = DriverStation.getAlliance()
+        if (a.isPresent) {
+            return if (a.get() == DriverStation.Alliance.Red) Color(0.35, 0.0, 0.0) // dark red
+            else Color(0.0, 0.0, 0.35)
+        }
+        return Color(0.15, 0.15, 0.15) // Grayscale 15%
+    }
+}
